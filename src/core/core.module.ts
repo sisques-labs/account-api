@@ -1,4 +1,5 @@
 import { appConfig } from './config/app.config';
+import { authConfig } from './config/auth.config';
 import { validateEnv } from './config/env.validation';
 import { kafkaConfig } from './config/kafka.config';
 import { otelConfig } from './config/otel.config';
@@ -6,6 +7,7 @@ import { postgresConfig } from './config/postgres.config';
 import { AGGREGATE_MODULE_MAP } from './messaging/domain/topics/aggregate-module.map.generated';
 import { HealthModule } from './health/health.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { SecurityModule } from './security/security.module';
 import { PingResolver } from './transport/graphql/resolvers/ping.resolver';
 import './transport/graphql/registered-enums.graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
@@ -29,7 +31,7 @@ const CORE_MODULES = [
   ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-    load: [postgresConfig, appConfig, otelConfig, kafkaConfig],
+    load: [postgresConfig, appConfig, authConfig, otelConfig, kafkaConfig],
     cache: true,
   }),
   TypeOrmModule.forRootAsync({
@@ -51,8 +53,10 @@ const CORE_MODULES = [
   ObservabilityModule,
   MessagingModule.forRoot({ aggregateModuleMap: AGGREGATE_MODULE_MAP }),
   HealthModule,
-  // No auth yet, so the default context builder (`{ requestId }`) is used —
-  // pass `contextBuilder` here once this service resolves an identity.
+  SecurityModule,
+  // Uses the default context builder (`{ requestId }`) — pass a
+  // `contextBuilder` that reads `JwtAuthGuard`'s claims here if/when an MCP
+  // tool needs the caller's identity.
   McpModule.forRoot({ name: 'nestjs-template', version: '0.1.0' }),
 ];
 

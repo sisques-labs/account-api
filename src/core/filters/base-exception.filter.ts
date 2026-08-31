@@ -1,3 +1,5 @@
+import { resolveIdentityExceptionStatus } from '@contexts/identity/transport/exceptions/identity-exception.filter';
+import { resolveTenancyExceptionStatus } from '@contexts/tenancy/transport/exceptions/tenancy-exception.filter';
 import {
   ArgumentsHost,
   Catch,
@@ -13,14 +15,10 @@ import { GraphQLError } from 'graphql';
  * Per-context HTTP status resolvers, registered here as bounded contexts are
  * added. Each function returns a status for the exceptions it recognises, or
  * `undefined` to let the next resolver (or the default) decide.
- *
- * Example, once a `users` context exists:
- *   import { resolveUsersExceptionStatus } from '@contexts/users/transport/exceptions/users-exception.filter';
- *   const EXCEPTION_STATUS_RESOLVERS = [resolveUsersExceptionStatus];
  */
 const EXCEPTION_STATUS_RESOLVERS: Array<
   (exception: BaseException) => number | undefined
-> = [];
+> = [resolveIdentityExceptionStatus, resolveTenancyExceptionStatus];
 
 @Catch(BaseException)
 export class BaseExceptionFilter

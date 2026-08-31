@@ -1,0 +1,63 @@
+import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant.aggregate';
+import { TenantNameValueObject } from '@contexts/tenancy/domain/value-objects/tenant-name/tenant-name.vo';
+import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';
+import { Injectable } from '@nestjs/common';
+import {
+  BaseBuilder,
+  DateValueObject,
+  FieldIsRequiredException,
+  UuidValueObject,
+} from '@sisques-labs/nestjs-kit';
+
+/**
+ * Tenant has no read side / view-model in the MVP — no query endpoint lists
+ * tenants yet (only `POST /tenants`), so `buildViewModel()` is intentionally
+ * unimplemented. Add it (and a TenantViewModel) when a tenant query lands.
+ */
+@Injectable()
+export class TenantBuilder extends BaseBuilder<TenantAggregate, never> {
+  private _appId!: string;
+  private _name!: string;
+  private _slug!: string;
+
+  withAppId(appId: string): this {
+    this._appId = appId;
+    return this;
+  }
+
+  withName(name: string): this {
+    this._name = name;
+    return this;
+  }
+
+  withSlug(slug: string): this {
+    this._slug = slug;
+    return this;
+  }
+
+  public override validate(): void {
+    super.validate();
+    if (!this._appId) throw new FieldIsRequiredException('appId');
+    if (!this._name) throw new FieldIsRequiredException('name');
+    if (!this._slug) throw new FieldIsRequiredException('slug');
+  }
+
+  public override build(): TenantAggregate {
+    this.validate();
+
+    return new TenantAggregate({
+      id: new UuidValueObject(this._id),
+      appId: new UuidValueObject(this._appId),
+      name: new TenantNameValueObject(this._name),
+      slug: new TenantSlugValueObject(this._slug),
+      createdAt: new DateValueObject(this._createdAt ?? new Date()),
+      updatedAt: new DateValueObject(this._updatedAt ?? new Date()),
+    });
+  }
+
+  public override buildViewModel(): never {
+    throw new Error(
+      'TenantBuilder.buildViewModel() is not implemented — no tenant read side exists in the MVP.',
+    );
+  }
+}

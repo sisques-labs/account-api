@@ -169,6 +169,11 @@ and `filter.field` interpolated straight into SQL with zero validation.
   `src/core/observability/` — every CommandBus/QueryBus dispatch is
   auto-instrumented, no per-handler wiring needed.
 - `.claude/skills/architecture/assets/aggregate-template.ts.template` — aggregate starter
-- Once the first bounded context exists, add its `README.md` at
-  `src/contexts/{context}/README.md` and reference it here as the canonical
-  example for the next context.
+- `src/contexts/identity/README.md` and `src/contexts/tenancy/README.md` —
+  the first two bounded contexts added to this service (REST-only, no
+  GraphQL/MCP transport), and the canonical example of the cross-context
+  port/adapter pattern in practice (each depends on the other via
+  `application/ports/` + `infrastructure/adapters/`, dispatching through
+  `CommandBus`/`QueryBus` — never a direct domain/application import).
+  `identity`'s README also documents the "one context or two?" decision
+  process for the next context that's tempted to merge two concerns.
