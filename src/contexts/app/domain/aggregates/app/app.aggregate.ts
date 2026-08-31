@@ -10,13 +10,11 @@ import { AppSlugValueObject } from '@contexts/app/domain/value-objects/app-slug/
 import { BaseAggregate, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 export class AppAggregate extends BaseAggregate {
-  private readonly _id: UuidValueObject;
   private _slug: AppSlugValueObject;
   private _name: AppNameValueObject;
 
   constructor(props: IApp) {
-    super(props.createdAt, props.updatedAt);
-    this._id = props.id;
+    super(props.id, props.createdAt, props.updatedAt);
     this._slug = props.slug;
     this._name = props.name;
   }
@@ -24,13 +22,7 @@ export class AppAggregate extends BaseAggregate {
   public create(): void {
     this.apply(
       new AppCreatedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: AppAggregate.name,
-          entityId: this._id.value,
-          entityType: AppAggregate.name,
-          eventType: AppCreatedEvent.name,
-        },
+        this.generateEventMetadata({ name: AppCreatedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -49,13 +41,7 @@ export class AppAggregate extends BaseAggregate {
 
     this.apply(
       new AppUpdatedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: AppAggregate.name,
-          entityId: this._id.value,
-          entityType: AppAggregate.name,
-          eventType: AppUpdatedEvent.name,
-        },
+        this.generateEventMetadata({ name: AppUpdatedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -64,13 +50,7 @@ export class AppAggregate extends BaseAggregate {
   public delete(): void {
     this.apply(
       new AppDeletedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: AppAggregate.name,
-          entityId: this._id.value,
-          entityType: AppAggregate.name,
-          eventType: AppDeletedEvent.name,
-        },
+        this.generateEventMetadata({ name: AppDeletedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -88,13 +68,7 @@ export class AppAggregate extends BaseAggregate {
 
     this.apply(
       new AppNameChangedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: AppAggregate.name,
-          entityId: this._id.value,
-          entityType: AppAggregate.name,
-          eventType: AppNameChangedEvent.name,
-        },
+        this.generateEventMetadata({ name: AppNameChangedEvent.name }),
         {
           id: this._id.value,
           oldValue: oldValue,
@@ -116,13 +90,7 @@ export class AppAggregate extends BaseAggregate {
 
     this.apply(
       new AppSlugChangedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: AppAggregate.name,
-          entityId: this._id.value,
-          entityType: AppAggregate.name,
-          eventType: AppSlugChangedEvent.name,
-        },
+        this.generateEventMetadata({ name: AppSlugChangedEvent.name }),
         {
           id: this._id.value,
           oldValue: oldValue,
