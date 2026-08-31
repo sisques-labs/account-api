@@ -1,8 +1,8 @@
-import { IUserPrimitives } from '@contexts/user/domain/primitives/user.primitives';
+import { IUserEventData } from '@contexts/user/domain/events/interfaces/user-event-data.interface';
 import { BaseEvent, IEventMetadata } from '@sisques-labs/nestjs-kit';
 
-export class UserUpdatedEvent extends BaseEvent<IUserPrimitives> {
-  constructor(metadata: IEventMetadata, data: IUserPrimitives) {
+export class UserUpdatedEvent extends BaseEvent<IUserEventData> {
+  constructor(metadata: IEventMetadata, data: IUserEventData) {
     super(metadata, data);
   }
 }

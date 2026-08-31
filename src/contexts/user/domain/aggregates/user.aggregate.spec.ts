@@ -65,6 +65,9 @@ describe('UserAggregate', () => {
         externalId: EXTERNAL_ID,
         email: EMAIL,
         displayName: DISPLAY_NAME,
+        platformAdmin: false,
+        createdAt: CREATED_AT,
+        updatedAt: UPDATED_AT,
       });
     });
   });

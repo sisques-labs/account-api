@@ -1,6 +1,3 @@
-export interface IUserEventData {
-  id: string;
-  externalId: string;
-  email: string;
-  displayName: string | null;
-}
+import { IUserPrimitives } from '@contexts/user/domain/primitives/user.primitives';
+
+export type IUserEventData = IUserPrimitives;
