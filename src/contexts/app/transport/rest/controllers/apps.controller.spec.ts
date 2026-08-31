@@ -23,9 +23,7 @@ describe('AppsController', () => {
 
   it('should dispatch a CreateAppCommand', async () => {
     commandBus.execute.mockResolvedValue({
-      appId: 'app-1',
-      slug: 'gardenia',
-      name: 'Gardenia',
+      id: 'app-1',
     });
 
     const result = await controller.create({
@@ -36,7 +34,7 @@ describe('AppsController', () => {
     expect(commandBus.execute).toHaveBeenCalledWith(
       expect.any(CreateAppCommand),
     );
-    expect(result.appId).toBe('app-1');
+    expect(result).toEqual('app-1');
   });
 
   it('should dispatch an AppFindAllQuery and map results through AppRestMapper', async () => {
