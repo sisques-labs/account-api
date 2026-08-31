@@ -36,7 +36,7 @@ describe('AuthController', () => {
       expect(commandBus.execute).toHaveBeenCalledWith(
         expect.any(RegisterUserCommand),
       );
-      expect(result.userId).toBe('user-1');
+      expect(result).toBe('user-1');
     });
   });
 

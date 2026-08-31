@@ -20,11 +20,7 @@ export class RegisterUserCommand {
     this.password = new PasswordValueObject(input.password);
     this.displayName =
       input.displayName !== undefined
-        ? new StringValueObject(input.displayName, {
-            minLength: 1,
-            maxLength: 120,
-            trim: true,
-          })
+        ? new StringValueObject(input.displayName)
         : undefined;
   }
 }

@@ -5,7 +5,6 @@ import {
   RegisterUserCommand,
   RegisterUserCommandInput,
 } from '@contexts/auth/application/commands/register-user/register-user.command';
-import { RegisterUserResult } from '@contexts/auth/application/commands/register-user/register-user-result.interface';
 import { LoginUserDto } from '@contexts/auth/transport/rest/dtos/login-user.dto';
 import { RefreshTokenDto } from '@contexts/auth/transport/rest/dtos/refresh-token.dto';
 import { RegisterUserDto } from '@contexts/auth/transport/rest/dtos/register-user.dto';
@@ -39,17 +38,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user (creates it in Keycloak too)' })
   @ApiResponse({ status: 201, description: 'User registered' })
   @ApiResponse({ status: 409, description: 'Email already registered' })
-  async register(@Body() dto: RegisterUserDto): Promise<RegisterUserResult> {
+  async register(@Body() dto: RegisterUserDto): Promise<string> {
     this.logger.log(`POST /auth/register email=${dto.email}`);
     const input: RegisterUserCommandInput = {
       email: dto.email,
       password: dto.password,
       displayName: dto.displayName,
     };
-    const userId = await this.commandBus.execute<RegisterUserCommand, string>(
+    return this.commandBus.execute<RegisterUserCommand, string>(
       new RegisterUserCommand(input),
     );
-    return { userId };
   }
 
   @Post('login')
