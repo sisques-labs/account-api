@@ -1,13 +1,12 @@
+import { ITenantPrimitives } from '@contexts/tenancy/domain/primitives/tenant.primitives';
 import { TenantNameValueObject } from '@contexts/tenancy/domain/value-objects/tenant-name/tenant-name.vo';
 import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';
 
-export interface UpdateTenantCommandInput {
+export type UpdateTenantCommandInput = {
   tenantId: string;
   requesterUserId: string;
-  name?: string;
-  slug?: string;
-}
+} & Partial<Pick<ITenantPrimitives, 'name' | 'slug'>>;
 
 export class UpdateTenantCommand {
   public readonly tenantId: UuidValueObject;

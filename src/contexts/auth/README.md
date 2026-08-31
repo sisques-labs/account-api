@@ -96,7 +96,7 @@ POST /auth/login  ->  LoginUserCommandHandler
                        2. IUserLookupPort.findByEmail() — local user lookup
                        3. ITenantMembershipLookupPort.findMembershipsByUserId()
                           -> tenant/role claims for the JWT
-                       4. TokenService.sign({sub, email, platformAdmin, tenants})
+                       4. TokenSignService.execute({sub, email, platformAdmin, tenants})
                        5. Generate + hash a new opaque refresh token; find
                           any existing SessionAggregate for this userId and
                           rotate it, or create a new one

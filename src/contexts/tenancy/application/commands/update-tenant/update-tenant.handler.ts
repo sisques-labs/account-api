@@ -1,5 +1,4 @@
 import { UpdateTenantCommand } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.command';
-import { IUpdateTenantResult } from '@contexts/tenancy/application/commands/update-tenant/update-tenant-result.interface';
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
 import { AssertTenantOwnerService } from '@contexts/tenancy/application/services/write/assert-tenant-owner/assert-tenant-owner.service';
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
@@ -15,7 +14,7 @@ import { BaseCommandHandler } from '@sisques-labs/nestjs-kit';
 @CommandHandler(UpdateTenantCommand)
 export class UpdateTenantCommandHandler
   extends BaseCommandHandler<UpdateTenantCommand, TenantAggregate>
-  implements ICommandHandler<UpdateTenantCommand>
+  implements ICommandHandler<UpdateTenantCommand, string>
 {
   private readonly logger = new Logger(UpdateTenantCommandHandler.name);
 
@@ -30,7 +29,7 @@ export class UpdateTenantCommandHandler
     super(eventBus);
   }
 
-  async execute(command: UpdateTenantCommand): Promise<IUpdateTenantResult> {
+  async execute(command: UpdateTenantCommand): Promise<string> {
     const { tenantId, requesterUserId, name, slug } = command;
 
     const tenant = await this.assertTenantExistsService.execute(tenantId);
@@ -46,11 +45,6 @@ export class UpdateTenantCommandHandler
 
     this.logger.log(`Tenant updated: ${tenant.id.value}`);
 
-    return {
-      tenantId: tenant.id.value,
-      appId: tenant.appId.value,
-      name: tenant.name.value,
-      slug: tenant.slug.value,
-    };
+    return tenant.id.value;
   }
 }

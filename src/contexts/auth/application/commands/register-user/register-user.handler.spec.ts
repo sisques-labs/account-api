@@ -45,8 +45,6 @@ describe('RegisterUserCommandHandler', () => {
     });
     userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
-      email: 'new@example.com',
-      displayName: 'New User',
     });
 
     await handler.execute(command);
@@ -75,8 +73,6 @@ describe('RegisterUserCommandHandler', () => {
     });
     userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
-      email: 'new@example.com',
-      displayName: 'New User',
     });
 
     await handler.execute(command);
@@ -95,8 +91,6 @@ describe('RegisterUserCommandHandler', () => {
     });
     userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
-      email: 'new@example.com',
-      displayName: 'New User',
     });
 
     await handler.execute(command);
@@ -115,8 +109,6 @@ describe('RegisterUserCommandHandler', () => {
     });
     userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
-      email: 'new@example.com',
-      displayName: 'New User',
     });
 
     const result = await handler.execute(command);
@@ -135,8 +127,6 @@ describe('RegisterUserCommandHandler', () => {
     });
     userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
-      email: 'new@example.com',
-      displayName: null,
     });
 
     await handler.execute(commandWithoutDisplayName);

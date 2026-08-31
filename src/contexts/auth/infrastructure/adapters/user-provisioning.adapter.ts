@@ -2,7 +2,6 @@ import { IUserProvisioningInput } from '@contexts/auth/application/ports/user-pr
 import { IUserProvisioningResult } from '@contexts/auth/application/ports/user-provisioning-result.interface';
 import { IUserProvisioningPort } from '@contexts/auth/application/ports/user-provisioning.port';
 import { CreateUserCommand } from '@contexts/user/application/commands/create-user/create-user.command';
-import { CreateUserResult } from '@contexts/user/application/commands/create-user/create-user.handler';
 import { Injectable, Logger } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 
@@ -25,8 +24,10 @@ export class UserProvisioningAdapter implements IUserProvisioningPort {
   ): Promise<IUserProvisioningResult> {
     this.logger.log(`Provisioning local user for email: ${input.email}`);
 
-    return this.commandBus.execute<CreateUserCommand, CreateUserResult>(
+    const userId = await this.commandBus.execute<CreateUserCommand, string>(
       new CreateUserCommand(input),
     );
+
+    return { userId };
   }
 }

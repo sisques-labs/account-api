@@ -85,13 +85,12 @@ describe('CreateUserCommandHandler', () => {
     expect(eventBus.publishAll).toHaveBeenCalledTimes(1);
   });
 
-  it('should return the new userId, email and displayName', async () => {
+  it('should return the new user id', async () => {
     userWriteRepository.save.mockResolvedValue(undefined as never);
 
     const result = await handler.execute(command);
 
-    expect(result.email).toBe('new@example.com');
-    expect(result.displayName).toBe('New User');
-    expect(typeof result.userId).toBe('string');
+    const savedUser = userWriteRepository.save.mock.calls[0][0];
+    expect(result).toBe(savedUser.id.value);
   });
 });

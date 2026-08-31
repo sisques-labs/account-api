@@ -10,16 +10,10 @@ import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { BaseCommandHandler, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
-export interface CreateUserResult {
-  userId: string;
-  email: string;
-  displayName: string | null;
-}
-
 @CommandHandler(CreateUserCommand)
 export class CreateUserCommandHandler
   extends BaseCommandHandler<CreateUserCommand, UserAggregate>
-  implements ICommandHandler<CreateUserCommand>
+  implements ICommandHandler<CreateUserCommand, string>
 {
   private readonly logger = new Logger(CreateUserCommandHandler.name);
 
@@ -33,7 +27,7 @@ export class CreateUserCommandHandler
     super(eventBus);
   }
 
-  async execute(command: CreateUserCommand): Promise<CreateUserResult> {
+  async execute(command: CreateUserCommand): Promise<string> {
     const { externalId, email, displayName } = command;
 
     await this.assertUserEmailAvailableService.execute(email);
@@ -59,10 +53,6 @@ export class CreateUserCommandHandler
 
     this.logger.log(`User created: ${user.id.value}`);
 
-    return {
-      userId: user.id.value,
-      email: user.email.value,
-      displayName: user.displayName?.value ?? null,
-    };
+    return user.id.value;
   }
 }

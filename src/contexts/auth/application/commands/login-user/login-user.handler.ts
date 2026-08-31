@@ -11,9 +11,9 @@ import {
   IUserLookupPort,
   USER_LOOKUP_PORT,
 } from '@contexts/auth/application/ports/user-lookup.port';
-import { TokenService } from '@contexts/auth/application/services/token.service';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { InvalidCredentialsException } from '@contexts/auth/domain/exceptions/invalid-credentials.exception';
 import {
@@ -43,7 +43,7 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
     private readonly tenantMembershipLookupPort: ITenantMembershipLookupPort,
     @Inject(SESSION_WRITE_REPOSITORY)
     private readonly sessionWriteRepository: ISessionWriteRepository,
-    private readonly tokenService: TokenService,
+    private readonly tokenSignService: TokenSignService,
     private readonly generateRefreshTokenService: GenerateRefreshTokenService,
     private readonly hashRefreshTokenService: HashRefreshTokenService,
     private readonly sessionBuilder: SessionBuilder,
@@ -69,7 +69,7 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
         user.userId,
       );
 
-    const accessToken = this.tokenService.sign({
+    const accessToken = await this.tokenSignService.execute({
       sub: user.userId,
       email: user.email,
       platformAdmin: user.platformAdmin,
@@ -78,7 +78,7 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
 
     const rawRefreshToken = this.generateRefreshTokenService.execute();
     const refreshTokenHash =
-      this.hashRefreshTokenService.execute(rawRefreshToken);
+      await this.hashRefreshTokenService.execute(rawRefreshToken);
     const refreshTokenTtlDays = this.configService.get<number>(
       'auth.refreshTokenTtlDays',
       30,

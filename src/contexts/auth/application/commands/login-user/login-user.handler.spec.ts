@@ -2,9 +2,9 @@ import { LoginUserCommand } from '@contexts/auth/application/commands/login-user
 import { IIdentityProviderPort } from '@contexts/auth/application/ports/identity-provider.port';
 import { ITenantMembershipLookupPort } from '@contexts/auth/application/ports/tenant-membership-lookup.port';
 import { IUserLookupPort } from '@contexts/auth/application/ports/user-lookup.port';
-import { TokenService } from '@contexts/auth/application/services/token.service';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { InvalidCredentialsException } from '@contexts/auth/domain/exceptions/invalid-credentials.exception';
 import { ISessionWriteRepository } from '@contexts/auth/domain/repositories/write/session-write.repository';
@@ -18,7 +18,7 @@ describe('LoginUserCommandHandler', () => {
   let identityProviderPort: jest.Mocked<IIdentityProviderPort>;
   let tenantMembershipLookupPort: jest.Mocked<ITenantMembershipLookupPort>;
   let sessionWriteRepository: jest.Mocked<ISessionWriteRepository>;
-  let tokenService: jest.Mocked<TokenService>;
+  let tokenSignService: jest.Mocked<TokenSignService>;
   let generateRefreshTokenService: jest.Mocked<GenerateRefreshTokenService>;
   let hashRefreshTokenService: jest.Mocked<HashRefreshTokenService>;
   let configService: jest.Mocked<ConfigService>;
@@ -52,10 +52,9 @@ describe('LoginUserCommandHandler', () => {
       save: jest.fn(),
       delete: jest.fn(),
     };
-    tokenService = {
-      sign: jest.fn(),
-      verify: jest.fn(),
-    } as unknown as jest.Mocked<TokenService>;
+    tokenSignService = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<TokenSignService>;
     generateRefreshTokenService = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<GenerateRefreshTokenService>;
@@ -71,7 +70,7 @@ describe('LoginUserCommandHandler', () => {
       identityProviderPort,
       tenantMembershipLookupPort,
       sessionWriteRepository,
-      tokenService,
+      tokenSignService,
       generateRefreshTokenService,
       hashRefreshTokenService,
       new SessionBuilder(),
@@ -109,13 +108,13 @@ describe('LoginUserCommandHandler', () => {
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([
       { tenantId: 'tenant-1', role: 'owner' },
     ]);
-    tokenService.sign.mockReturnValue('signed-access-token');
+    tokenSignService.execute.mockResolvedValue('signed-access-token');
     generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
-    hashRefreshTokenService.execute.mockReturnValue('a'.repeat(64));
+    hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
 
     const result = await handler.execute(command);
 
-    expect(tokenService.sign).toHaveBeenCalledWith({
+    expect(tokenSignService.execute).toHaveBeenCalledWith({
       sub: USER_LOOKUP_RESULT.userId,
       email: USER_LOOKUP_RESULT.email,
       platformAdmin: false,
@@ -133,9 +132,9 @@ describe('LoginUserCommandHandler', () => {
     sessionWriteRepository.findByUserId.mockResolvedValue(null);
     sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
-    tokenService.sign.mockReturnValue('signed-access-token');
+    tokenSignService.execute.mockResolvedValue('signed-access-token');
     generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
-    hashRefreshTokenService.execute.mockReturnValue('b'.repeat(64));
+    hashRefreshTokenService.execute.mockResolvedValue('b'.repeat(64));
 
     await handler.execute(command);
 
@@ -161,9 +160,9 @@ describe('LoginUserCommandHandler', () => {
     sessionWriteRepository.findByUserId.mockResolvedValue(existingSession);
     sessionWriteRepository.save.mockResolvedValue(existingSession);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
-    tokenService.sign.mockReturnValue('signed-access-token');
+    tokenSignService.execute.mockResolvedValue('signed-access-token');
     generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
-    hashRefreshTokenService.execute.mockReturnValue('c'.repeat(64));
+    hashRefreshTokenService.execute.mockResolvedValue('c'.repeat(64));
 
     await handler.execute(command);
 

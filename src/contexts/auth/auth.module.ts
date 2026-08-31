@@ -5,9 +5,10 @@ import { IDENTITY_PROVIDER_PORT } from '@contexts/auth/application/ports/identit
 import { TENANT_MEMBERSHIP_LOOKUP_PORT } from '@contexts/auth/application/ports/tenant-membership-lookup.port';
 import { USER_LOOKUP_PORT } from '@contexts/auth/application/ports/user-lookup.port';
 import { USER_PROVISIONING_PORT } from '@contexts/auth/application/ports/user-provisioning.port';
-import { TokenService } from '@contexts/auth/application/services/token.service';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
+import { TokenVerifyService } from '@contexts/auth/application/services/write/token-verify/token-verify.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { SESSION_WRITE_REPOSITORY } from '@contexts/auth/domain/repositories/write/session-write.repository';
 import { KeycloakIdentityProviderAdapter } from '@contexts/auth/infrastructure/adapters/keycloak-identity-provider.adapter';
@@ -29,7 +30,8 @@ const COMMAND_HANDLERS = [
 ];
 
 const APPLICATION_SERVICES = [
-  TokenService,
+  TokenSignService,
+  TokenVerifyService,
   GenerateRefreshTokenService,
   HashRefreshTokenService,
 ];
@@ -67,9 +69,10 @@ const TRANSPORT_REST_CONTROLLERS = [AuthController];
     CqrsModule,
     TypeOrmModule.forFeature(INFRASTRUCTURE_ENTITIES),
     // JwtService itself comes from the global `SecurityModule` (imported
-    // once in CoreModule) — TokenService just injects it, no per-context
-    // JwtModule.registerAsync here (that would risk a second, divergent
-    // config from the one `JwtAuthGuard` verifies against).
+    // once in CoreModule) — TokenSignService/TokenVerifyService just inject
+    // it, no per-context JwtModule.registerAsync here (that would risk a
+    // second, divergent config from the one `JwtAuthGuard` verifies
+    // against).
   ],
   controllers: [...TRANSPORT_REST_CONTROLLERS],
   providers: [
@@ -80,6 +83,6 @@ const TRANSPORT_REST_CONTROLLERS = [AuthController];
     ...INFRASTRUCTURE_REPOSITORIES,
     ...INFRASTRUCTURE_ADAPTERS,
   ],
-  exports: [TokenService],
+  exports: [TokenSignService, TokenVerifyService],
 })
 export class AuthModule {}

@@ -8,9 +8,9 @@ import {
   USER_LOOKUP_PORT,
 } from '@contexts/auth/application/ports/user-lookup.port';
 import { ILoginSessionResult } from '@contexts/auth/application/commands/login-user/login-user.handler';
-import { TokenService } from '@contexts/auth/application/services/token.service';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { InvalidRefreshTokenException } from '@contexts/auth/domain/exceptions/invalid-refresh-token.exception';
 import {
   ISessionWriteRepository,
@@ -31,14 +31,14 @@ export class RefreshSessionCommandHandler implements ICommandHandler<RefreshSess
     private readonly userLookupPort: IUserLookupPort,
     @Inject(TENANT_MEMBERSHIP_LOOKUP_PORT)
     private readonly tenantMembershipLookupPort: ITenantMembershipLookupPort,
-    private readonly tokenService: TokenService,
+    private readonly tokenSignService: TokenSignService,
     private readonly generateRefreshTokenService: GenerateRefreshTokenService,
     private readonly hashRefreshTokenService: HashRefreshTokenService,
     private readonly configService: ConfigService,
   ) {}
 
   async execute(command: RefreshSessionCommand): Promise<ILoginSessionResult> {
-    const presentedHash = this.hashRefreshTokenService.execute(
+    const presentedHash = await this.hashRefreshTokenService.execute(
       command.refreshToken.value,
     );
 
@@ -61,7 +61,7 @@ export class RefreshSessionCommandHandler implements ICommandHandler<RefreshSess
         user.userId,
       );
 
-    const accessToken = this.tokenService.sign({
+    const accessToken = await this.tokenSignService.execute({
       sub: user.userId,
       email: user.email,
       platformAdmin: user.platformAdmin,
@@ -70,7 +70,7 @@ export class RefreshSessionCommandHandler implements ICommandHandler<RefreshSess
 
     const rawRefreshToken = this.generateRefreshTokenService.execute();
     const refreshTokenHash =
-      this.hashRefreshTokenService.execute(rawRefreshToken);
+      await this.hashRefreshTokenService.execute(rawRefreshToken);
     const refreshTokenTtlDays = this.configService.get<number>(
       'auth.refreshTokenTtlDays',
       30,

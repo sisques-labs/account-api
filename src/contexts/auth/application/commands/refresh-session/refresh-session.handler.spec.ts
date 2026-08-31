@@ -1,9 +1,9 @@
 import { RefreshSessionCommand } from '@contexts/auth/application/commands/refresh-session/refresh-session.command';
 import { ITenantMembershipLookupPort } from '@contexts/auth/application/ports/tenant-membership-lookup.port';
 import { IUserLookupPort } from '@contexts/auth/application/ports/user-lookup.port';
-import { TokenService } from '@contexts/auth/application/services/token.service';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { InvalidRefreshTokenException } from '@contexts/auth/domain/exceptions/invalid-refresh-token.exception';
 import { ISessionWriteRepository } from '@contexts/auth/domain/repositories/write/session-write.repository';
@@ -16,7 +16,7 @@ describe('RefreshSessionCommandHandler', () => {
   let sessionWriteRepository: jest.Mocked<ISessionWriteRepository>;
   let userLookupPort: jest.Mocked<IUserLookupPort>;
   let tenantMembershipLookupPort: jest.Mocked<ITenantMembershipLookupPort>;
-  let tokenService: jest.Mocked<TokenService>;
+  let tokenSignService: jest.Mocked<TokenSignService>;
   let generateRefreshTokenService: jest.Mocked<GenerateRefreshTokenService>;
   let hashRefreshTokenService: jest.Mocked<HashRefreshTokenService>;
   let configService: jest.Mocked<ConfigService>;
@@ -55,10 +55,9 @@ describe('RefreshSessionCommandHandler', () => {
       findById: jest.fn(),
     };
     tenantMembershipLookupPort = { findMembershipsByUserId: jest.fn() };
-    tokenService = {
-      sign: jest.fn(),
-      verify: jest.fn(),
-    } as unknown as jest.Mocked<TokenService>;
+    tokenSignService = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<TokenSignService>;
     generateRefreshTokenService = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<GenerateRefreshTokenService>;
@@ -73,7 +72,7 @@ describe('RefreshSessionCommandHandler', () => {
       sessionWriteRepository,
       userLookupPort,
       tenantMembershipLookupPort,
-      tokenService,
+      tokenSignService,
       generateRefreshTokenService,
       hashRefreshTokenService,
       configService,
@@ -81,7 +80,7 @@ describe('RefreshSessionCommandHandler', () => {
   });
 
   it('should throw InvalidRefreshTokenException when no session matches the hash', async () => {
-    hashRefreshTokenService.execute.mockReturnValue('a'.repeat(64));
+    hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
     sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(null);
 
     await expect(handler.execute(command)).rejects.toThrow(
@@ -90,7 +89,7 @@ describe('RefreshSessionCommandHandler', () => {
   });
 
   it('should delete and throw when the stored session is expired', async () => {
-    hashRefreshTokenService.execute.mockReturnValue('a'.repeat(64));
+    hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
     const session = buildSession(new Date(Date.now() - 1000));
     sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(session);
 
@@ -104,14 +103,14 @@ describe('RefreshSessionCommandHandler', () => {
 
   it('should rotate the session and return a new access token', async () => {
     hashRefreshTokenService.execute
-      .mockReturnValueOnce('a'.repeat(64)) // presented token hash
-      .mockReturnValueOnce('c'.repeat(64)); // new token hash
+      .mockResolvedValueOnce('a'.repeat(64)) // presented token hash
+      .mockResolvedValueOnce('c'.repeat(64)); // new token hash
     const session = buildSession(new Date(Date.now() + 1_000_000));
     sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(session);
     sessionWriteRepository.save.mockResolvedValue(session);
     userLookupPort.findById.mockResolvedValue(USER_LOOKUP_RESULT);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
-    tokenService.sign.mockReturnValue('new-access-token');
+    tokenSignService.execute.mockResolvedValue('new-access-token');
     generateRefreshTokenService.execute.mockReturnValue('new-raw-token');
 
     const result = await handler.execute(command);

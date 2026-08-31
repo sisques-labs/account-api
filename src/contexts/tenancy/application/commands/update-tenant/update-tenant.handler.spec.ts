@@ -123,12 +123,7 @@ describe('UpdateTenantCommandHandler', () => {
     expect(tenantWriteRepository.save).toHaveBeenCalledTimes(1);
     const saved = tenantWriteRepository.save.mock.calls[0][0];
     expect(saved.name.value).toBe('My Renamed Garden');
-    expect(result).toEqual({
-      tenantId: TENANT_ID,
-      appId: APP_ID,
-      name: 'My Renamed Garden',
-      slug: 'my-garden',
-    });
+    expect(result).toBe(TENANT_ID);
     expect(eventBus.publishAll).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,7 +4,6 @@ import { CreateTenantCommand } from '@contexts/tenancy/application/commands/crea
 import { ICreateTenantResult } from '@contexts/tenancy/application/commands/create-tenant/create-tenant-result.interface';
 import { DeleteTenantCommand } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.command';
 import { UpdateTenantCommand } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.command';
-import { IUpdateTenantResult } from '@contexts/tenancy/application/commands/update-tenant/update-tenant-result.interface';
 import { TenantMembershipFindByTenantIdQuery } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.query';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 import { AddTenantMemberDto } from '@contexts/tenancy/transport/rest/dtos/add-tenant-member.dto';
@@ -89,7 +88,7 @@ export class TenantsController {
     @Param('tenantId', ParseUUIDPipe) tenantId: string,
     @Body() dto: UpdateTenantDto,
     @CurrentUser() user: CurrentUserPayload,
-  ): Promise<IUpdateTenantResult> {
+  ): Promise<string> {
     this.logger.log(`PATCH /tenants/${tenantId} requester=${user.userId}`);
     return this.commandBus.execute(
       new UpdateTenantCommand({

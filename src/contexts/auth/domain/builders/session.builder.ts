@@ -1,5 +1,6 @@
 import { SessionAggregate } from '@contexts/auth/domain/aggregates/session.aggregate';
 import { RefreshTokenHashValueObject } from '@contexts/auth/domain/value-objects/refresh-token-hash/refresh-token-hash.vo';
+import { SessionViewModel } from '@contexts/auth/domain/view-models/session.view-model';
 import { Injectable } from '@nestjs/common';
 import {
   BaseBuilder,
@@ -9,7 +10,10 @@ import {
 } from '@sisques-labs/nestjs-kit';
 
 @Injectable()
-export class SessionBuilder extends BaseBuilder<SessionAggregate, never> {
+export class SessionBuilder extends BaseBuilder<
+  SessionAggregate,
+  SessionViewModel
+> {
   private _userId!: string;
   private _refreshTokenHash!: string;
   private _expiresAt!: Date;
@@ -50,8 +54,15 @@ export class SessionBuilder extends BaseBuilder<SessionAggregate, never> {
     });
   }
 
-  // No read-side/GraphQL exposure for sessions — never called.
-  public override buildViewModel(): never {
-    throw new Error('SessionBuilder has no view model.');
+  public override buildViewModel(): SessionViewModel {
+    this.validate();
+
+    return new SessionViewModel({
+      id: this._id,
+      userId: this._userId,
+      expiresAt: this._expiresAt,
+      createdAt: this._createdAt ?? new Date(),
+      updatedAt: this._updatedAt ?? new Date(),
+    });
   }
 }
