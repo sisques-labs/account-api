@@ -1,5 +1,4 @@
 import { LoginUserCommand } from '@contexts/identity/application/commands/login-user/login-user.command';
-import { ILoginSessionResult } from '@contexts/identity/application/commands/login-user/login-session-result.interface';
 import {
   IDENTITY_PROVIDER_PORT,
   IIdentityProviderPort,
@@ -20,6 +19,11 @@ import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 
+export interface ILoginSessionResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
 @CommandHandler(LoginUserCommand)
 export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand> {
   private readonly logger = new Logger(LoginUserCommandHandler.name);
@@ -38,6 +42,8 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
   ) {}
 
   async execute(command: LoginUserCommand): Promise<ILoginSessionResult> {
+    this.logger.log(`Login user: ${command.email.value}`);
+
     const { email, password } = command;
 
     await this.identityProviderPort
