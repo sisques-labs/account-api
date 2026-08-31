@@ -67,10 +67,6 @@ describe('CreateAppCommandHandler', () => {
 
     expect(appWriteRepository.save).toHaveBeenCalledTimes(1);
     expect(eventBus.publishAll).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({
-      appId: expect.any(String),
-      slug: 'gardenia',
-      name: 'Gardenia',
-    });
+    expect(result).toEqual(expect.any(String));
   });
 });

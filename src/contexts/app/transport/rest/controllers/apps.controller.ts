@@ -1,5 +1,4 @@
 import { CreateAppCommand } from '@contexts/app/application/commands/create-app/create-app.command';
-import { CreateAppResult } from '@contexts/app/application/commands/create-app/create-app.handler';
 import { AppFindAllQuery } from '@contexts/app/application/queries/app-find-all/app-find-all.query';
 import { AppViewModel } from '@contexts/app/domain/view-models/app.view-model';
 import { AppRestResponseDto } from '@contexts/app/transport/rest/dtos/app-rest-response.dto';
@@ -48,7 +47,7 @@ export class AppsController {
   @ApiOperation({ summary: 'Register a new app (e.g. "gardenia", "nexora")' })
   @ApiResponse({ status: 201, description: 'App created' })
   @ApiResponse({ status: 409, description: 'Slug already taken' })
-  async create(@Body() dto: CreateAppDto): Promise<CreateAppResult> {
+  async create(@Body() dto: CreateAppDto): Promise<string> {
     this.logger.log(`POST /apps slug=${dto.slug}`);
     return this.commandBus.execute(
       new CreateAppCommand({ slug: dto.slug, name: dto.name }),

@@ -10,12 +10,6 @@ import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { BaseCommandHandler, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
-export interface CreateAppResult {
-  appId: string;
-  slug: string;
-  name: string;
-}
-
 @CommandHandler(CreateAppCommand)
 export class CreateAppCommandHandler
   extends BaseCommandHandler<CreateAppCommand, AppAggregate>
@@ -33,12 +27,17 @@ export class CreateAppCommandHandler
     super(eventBus);
   }
 
-  async execute(command: CreateAppCommand): Promise<CreateAppResult> {
+  async execute(command: CreateAppCommand): Promise<string> {
+    this.logger.log(
+      `Creating app with slug: ${command.slug.value} and name: ${command.name.value}`,
+    );
+
     const { slug, name } = command;
 
     await this.assertAppSlugAvailableService.execute(slug);
 
     const now = new Date();
+
     const app = this.appBuilder
       .withId(UuidValueObject.generate().value)
       .withSlug(slug.value)
@@ -53,6 +52,6 @@ export class CreateAppCommandHandler
 
     this.logger.log(`App created: ${app.id.value}`);
 
-    return { appId: app.id.value, slug: app.slug.value, name: app.name.value };
+    return app.id.value;
   }
 }
