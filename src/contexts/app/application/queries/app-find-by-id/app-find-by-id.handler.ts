@@ -17,7 +17,7 @@ export class AppFindByIdQueryHandler implements IQueryHandler<AppFindByIdQuery> 
   ) {}
 
   async execute(query: AppFindByIdQuery): Promise<AppViewModel | null> {
-    this.logger.log(`Finding app by id: ${query.id}`);
-    return this.appReadRepository.findById(query.id);
+    this.logger.log(`Finding app by id: ${query.id.value}`);
+    return this.appReadRepository.findById(query.id.value);
   }
 }

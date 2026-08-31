@@ -1,11 +1,12 @@
-export interface AppFindByIdQueryInput {
-  id: string;
-}
+import { IAppPrimitives } from '@contexts/app/domain/primitives/app.primitives';
+import { UuidValueObject } from '@sisques-labs/nestjs-kit';
+
+export type AppFindByIdQueryInput = Pick<IAppPrimitives, 'id'>;
 
 export class AppFindByIdQuery {
-  public readonly id: string;
+  public readonly id: UuidValueObject;
 
   constructor(input: AppFindByIdQueryInput) {
-    this.id = input.id;
+    this.id = new UuidValueObject(input.id);
   }
 }
