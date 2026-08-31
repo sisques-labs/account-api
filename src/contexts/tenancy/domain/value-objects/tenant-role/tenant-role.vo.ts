@@ -1,24 +1,26 @@
-import { StringValueObject } from '@sisques-labs/nestjs-kit';
+import { EnumValueObject } from '@sisques-labs/nestjs-kit';
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 
-/**
- * A tenant member's role. Free text by design — only "owner" carries fixed
- * meaning for the platform (owners can invite/remove members, rename or
- * delete the tenant); every other role is defined and interpreted by the
- * consuming app (see architecture doc, "Modelo de tenancy" — layer 2).
- */
-export class TenantRoleValueObject extends StringValueObject {
-  public static readonly OWNER = 'owner';
+export class TenantRoleValueObject extends EnumValueObject<
+  typeof TenantRoleEnum
+> {
+  constructor(value: TenantRoleEnum) {
+    super(value);
+  }
 
-  constructor(value: string) {
-    super(value, {
-      minLength: 1,
-      maxLength: 50,
-      trim: true,
-      caseSensitive: false,
-    });
+  protected get enumObject(): typeof TenantRoleEnum {
+    return TenantRoleEnum as unknown as typeof TenantRoleEnum;
   }
 
   isOwner(): boolean {
-    return this.value.toLowerCase() === TenantRoleValueObject.OWNER;
+    return this.value === TenantRoleEnum.OWNER;
+  }
+
+  isMember(): boolean {
+    return this.value === TenantRoleEnum.MEMBER;
+  }
+
+  isAdmin(): boolean {
+    return this.value === TenantRoleEnum.ADMIN;
   }
 }
