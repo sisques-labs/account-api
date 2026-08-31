@@ -1,8 +1,10 @@
+import { ITenantMembershipPrimitives } from '@contexts/tenancy/domain/primitives/tenant-membership.primitives';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';
 
-export interface TenantMembershipFindByTenantIdQueryInput {
-  tenantId: string;
-}
+export type TenantMembershipFindByTenantIdQueryInput = Pick<
+  ITenantMembershipPrimitives,
+  'tenantId'
+>;
 
 export class TenantMembershipFindByTenantIdQuery {
   public readonly tenantId: UuidValueObject;
