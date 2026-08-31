@@ -1,5 +1,3 @@
-import { AppNotFoundException } from '@contexts/tenancy/domain/exceptions/app-not-found.exception';
-import { AppSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/app-slug-already-exists.exception';
 import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/member-user-not-found.exception';
 import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership-already-exists.exception';
 import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-not-found.exception';
@@ -16,12 +14,6 @@ class SomeOtherException extends BaseException {
 }
 
 describe('resolveTenancyExceptionStatus', () => {
-  it('should map AppSlugAlreadyExistsException to 409', () => {
-    expect(
-      resolveTenancyExceptionStatus(new AppSlugAlreadyExistsException('x')),
-    ).toBe(HttpStatus.CONFLICT);
-  });
-
   it('should map TenantSlugAlreadyExistsException to 409', () => {
     expect(
       resolveTenancyExceptionStatus(
@@ -36,12 +28,6 @@ describe('resolveTenancyExceptionStatus', () => {
         new TenantMembershipAlreadyExistsException('tenant-1', 'user-1'),
       ),
     ).toBe(HttpStatus.CONFLICT);
-  });
-
-  it('should map AppNotFoundException to 404', () => {
-    expect(resolveTenancyExceptionStatus(new AppNotFoundException('x'))).toBe(
-      HttpStatus.NOT_FOUND,
-    );
   });
 
   it('should map TenantNotFoundException to 404', () => {

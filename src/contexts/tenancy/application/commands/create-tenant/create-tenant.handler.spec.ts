@@ -3,7 +3,6 @@ import { AssertAppExistsService } from '@contexts/tenancy/application/services/w
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
 import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant.builder';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
-import { AppNotFoundException } from '@contexts/tenancy/domain/exceptions/app-not-found.exception';
 import { ITenantWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { ITenantMembershipWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
 import { EventBus } from '@nestjs/cqrs';
@@ -83,12 +82,10 @@ describe('CreateTenantCommandHandler', () => {
 
   it('should not create a tenant when the app does not exist', async () => {
     assertAppExistsService.execute.mockRejectedValue(
-      new AppNotFoundException(APP_ID),
+      new Error('app not found'),
     );
 
-    await expect(handler.execute(command)).rejects.toThrow(
-      AppNotFoundException,
-    );
+    await expect(handler.execute(command)).rejects.toThrow('app not found');
     expect(tenantWriteRepository.save).not.toHaveBeenCalled();
   });
 

@@ -1,3 +1,4 @@
+import { resolveAppExceptionStatus } from '@contexts/app/transport/exceptions/app-exception.filter';
 import { resolveIdentityExceptionStatus } from '@contexts/identity/transport/exceptions/identity-exception.filter';
 import { resolveTenancyExceptionStatus } from '@contexts/tenancy/transport/exceptions/tenancy-exception.filter';
 import {
@@ -18,7 +19,11 @@ import { GraphQLError } from 'graphql';
  */
 const EXCEPTION_STATUS_RESOLVERS: Array<
   (exception: BaseException) => number | undefined
-> = [resolveIdentityExceptionStatus, resolveTenancyExceptionStatus];
+> = [
+  resolveIdentityExceptionStatus,
+  resolveAppExceptionStatus,
+  resolveTenancyExceptionStatus,
+];
 
 @Catch(BaseException)
 export class BaseExceptionFilter

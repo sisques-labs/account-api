@@ -1,18 +1,19 @@
-import { AppBuilder } from '../../src/contexts/tenancy/domain/builders/app.builder';
-import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant.builder';
-import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership.builder';
-import { APP_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/app-write.repository';
-import { IAppWriteRepository } from '../../src/contexts/tenancy/domain/repositories/write/app-write.repository';
-import { TENANT_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';
-import { ITenantWriteRepository } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';
-import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
-import { ITenantMembershipWriteRepository } from '../../src/contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
-import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
-import { ITenantMembershipReadRepository } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
+import { AppBuilder } from '../../src/contexts/app/domain/builders/app.builder';
+import { APP_WRITE_REPOSITORY } from '../../src/contexts/app/domain/repositories/write/app-write.repository';
+import { IAppWriteRepository } from '../../src/contexts/app/domain/repositories/write/app-write.repository';
+import { AppModule } from '../../src/contexts/app/app.module';
 import { UserBuilder } from '../../src/contexts/identity/domain/builders/user.builder';
 import { USER_WRITE_REPOSITORY } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
 import { IUserWriteRepository } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
 import { IdentityModule } from '../../src/contexts/identity/identity.module';
+import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant.builder';
+import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
+import { ITenantMembershipReadRepository } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
+import { TENANT_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';
+import { ITenantWriteRepository } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';
+import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
+import { ITenantMembershipWriteRepository } from '../../src/contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
 import { TenancyModule } from '../../src/contexts/tenancy/tenancy.module';
 import { truncateAll } from '../helpers/db-reset';
 import {
@@ -40,7 +41,7 @@ describe('Tenancy repositories (integration)', () => {
 
   beforeAll(async () => {
     ctx = await createIntegrationModule({
-      imports: [IdentityModule, TenancyModule],
+      imports: [IdentityModule, AppModule, TenancyModule],
     });
     appWriteRepo = ctx.module.get(APP_WRITE_REPOSITORY);
     tenantWriteRepo = ctx.module.get(TENANT_WRITE_REPOSITORY);
@@ -101,40 +102,6 @@ describe('Tenancy repositories (integration)', () => {
     await tenantWriteRepo.save(tenant);
     return tenant;
   };
-
-  describe('App', () => {
-    it('should save and find an app by id', async () => {
-      await seedApp();
-
-      const found = await appWriteRepo.findById(APP_ID);
-
-      expect(found).not.toBeNull();
-      expect(found?.slug.value).toBe('gardenia');
-    });
-
-    it('should find an app by slug', async () => {
-      await seedApp();
-
-      const found = await appWriteRepo.findBySlug('gardenia');
-
-      expect(found).not.toBeNull();
-    });
-
-    it('should enforce slug uniqueness', async () => {
-      await seedApp();
-
-      const now = new Date();
-      const duplicate = appBuilder
-        .withId('550e8400-e29b-41d4-a716-446655440011')
-        .withSlug('gardenia')
-        .withName('Gardenia Clone')
-        .withCreatedAt(now)
-        .withUpdatedAt(now)
-        .build();
-
-      await expect(appWriteRepo.save(duplicate)).rejects.toThrow();
-    });
-  });
 
   describe('Tenant', () => {
     it('should save and find a tenant by appId+slug', async () => {

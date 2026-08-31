@@ -1,3 +1,4 @@
+import { AppModule } from '@contexts/app/app.module';
 import { IdentityModule } from '@contexts/identity/identity.module';
 import { TenancyModule } from '@contexts/tenancy/tenancy.module';
 import { DynamicModule, Module, Type } from '@nestjs/common';
@@ -6,6 +7,7 @@ import { DynamicModule, Module, Type } from '@nestjs/common';
 // const CONTEXT_MODULES = [OrdersModule, CustomersModule];
 const CONTEXT_MODULES: (DynamicModule | Type<unknown>)[] = [
   IdentityModule,
+  AppModule,
   TenancyModule,
 ];
 

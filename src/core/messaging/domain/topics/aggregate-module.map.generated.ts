@@ -13,7 +13,7 @@
  * @see scripts/generate-aggregate-module-map.ts
  */
 export const AGGREGATE_MODULE_MAP: Readonly<Record<string, string>> = {
-  AppAggregate: 'tenancy',
+  AppAggregate: 'app',
   TenantAggregate: 'tenancy',
   TenantMembershipAggregate: 'tenancy',
   UserAggregate: 'identity',

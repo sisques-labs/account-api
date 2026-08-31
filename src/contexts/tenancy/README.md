@@ -9,16 +9,21 @@ inside a given app (layer 2, e.g. Gardenia's "member" can water but not
 delete plants) is that app's own concern; this context stores and returns
 roles as opaque labels, never interprets them.
 
-It owns three aggregates:
+It owns two aggregates:
 
-- **App** — one row per app in the ecosystem (Gardenia, Nexora, ...).
-  `tenant.app_id` is a required FK, and no MVP endpoint creates an `app`
-  otherwise, so `POST /apps` exists purely as bootstrapping plumbing (not
-  called out in the architecture doc's MVP endpoint list) — without it,
-  `POST /tenants` would be untestable.
 - **Tenant** — belongs to exactly one app (`UNIQUE(app_id, slug)`).
 - **TenantMembership** — a user's role within a tenant
   (`UNIQUE(tenant_id, user_id)`).
+
+The **App** aggregate (one row per app in the ecosystem — Gardenia, Nexora, …)
+lives in the separate `app` context. `tenant.app_id` is a required FK; tenancy
+reaches `app` only through `IAppLookupPort` + `AppLookupAdapter` (QueryBus),
+never a direct domain import.
+
+See `src/contexts/app/` for app registration (`POST /apps`, `GET /apps`).
+The `POST /apps` endpoint exists purely as bootstrapping plumbing (not called
+out in the architecture doc's MVP endpoint list) — without it, `POST /tenants`
+would be untestable.
 
 See `src/contexts/identity/README.md` ("One context or two?") for why
 identity and tenancy are two contexts rather than one.
@@ -44,7 +49,7 @@ this context never validates or interprets it beyond "non-empty".
 POST /tenants  ->  TenantsController (JwtAuthGuard, @CurrentUser())
                ->  CreateTenantCommand { appId, name, slug?, creatorUserId }
                ->  CreateTenantCommandHandler
-                   1. AssertAppExistsService (404 if the app doesn't exist)
+                   1. AssertAppExistsService -> IAppLookupPort (404 if the app doesn't exist)
                    2. AssertTenantSlugAvailableService (409 if app+slug taken)
                       — slug defaults to a slugified `name` when omitted
                    3. TenantBuilder -> tenant.create() -> save
@@ -93,6 +98,7 @@ reasonable follow-up work once there's a concrete UI need for it.
 | Port | Adapter | Dispatches | Used by |
 |------|---------|-----------|---------|
 | `IUserLookupPort` (`findUserIdByEmail`) | `UserLookupAdapter` | `UserFindByEmailQuery` (identity, via `QueryBus`) | `AddTenantMemberCommandHandler` |
+| `IAppLookupPort` (`assertExists`) | `AppLookupAdapter` | `AppFindByIdQuery` (app, via `QueryBus`) | `AssertAppExistsService` → `CreateTenantCommandHandler` |
 
 `tenancy` also **exposes** `TenantMembershipFindByUserIdQuery`, consumed
 cross-context by `identity`'s `TenantMembershipLookupAdapter` (JWT claims at
@@ -112,8 +118,6 @@ login/refresh) — see `identity`'s README.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/apps` | JWT | Register an app. 201, or 409 if the slug is taken. |
-| `GET` | `/apps` | JWT | List all apps. |
 | `POST` | `/tenants` | JWT | Create a tenant; caller becomes owner. 201, 404 (app), or 409 (slug). |
 | `POST` | `/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
 | `GET` | `/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
@@ -122,16 +126,15 @@ login/refresh) — see `identity`'s README.
 
 | Class | Description |
 |-------|-------------|
-| `CreateAppCommand` | Registers an app |
 | `CreateTenantCommand` | Creates a tenant + owner membership for the creator |
 | `AddTenantMemberCommand` | Adds an existing user (by email) as a member |
-| `AppFindAllQuery` | Lists all apps |
+| `AppFindAllQuery` | Lists all apps — lives in `app` context |
 | `TenantMembershipFindByTenantIdQuery` | Lists a tenant's members |
 | `TenantMembershipFindByUserIdQuery` | Lists a user's memberships — consumed cross-context by `identity` |
 
 ### Domain events
 
-`AppCreatedEvent`, `TenantCreatedEvent`, `TenantMembershipCreatedEvent`.
+`TenantCreatedEvent`, `TenantMembershipCreatedEvent`.
 
 ---
 
@@ -139,6 +142,7 @@ login/refresh) — see `identity`'s README.
 
 ```bash
 pnpm test src/contexts/tenancy         # unit
+pnpm test src/contexts/app             # unit
 pnpm test:integration                  # App/Tenant/TenantMembership repos, real Postgres
 pnpm test:e2e                          # full create-app/create-tenant/add-member flow
 ```

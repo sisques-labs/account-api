@@ -1,38 +1,33 @@
-import { AppAggregate } from '@contexts/tenancy/domain/aggregates/app.aggregate';
-import { AppNotFoundException } from '@contexts/tenancy/domain/exceptions/app-not-found.exception';
-import { IAppWriteRepository } from '@contexts/tenancy/domain/repositories/write/app-write.repository';
+import { IAppLookupPort } from '@contexts/tenancy/application/ports/app-lookup.port';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 import { AssertAppExistsService } from './assert-app-exists.service';
 
 describe('AssertAppExistsService', () => {
   let service: AssertAppExistsService;
-  let appWriteRepository: jest.Mocked<IAppWriteRepository>;
+  let appLookupPort: jest.Mocked<IAppLookupPort>;
 
   beforeEach(() => {
-    appWriteRepository = {
-      findBySlug: jest.fn(),
-      findById: jest.fn(),
-      findByCriteria: jest.fn(),
-      save: jest.fn(),
-      delete: jest.fn(),
+    appLookupPort = {
+      assertExists: jest.fn(),
     };
-    service = new AssertAppExistsService(appWriteRepository);
+    service = new AssertAppExistsService(appLookupPort);
   });
 
-  it('should return the app when found', async () => {
-    const app = {} as unknown as AppAggregate;
-    appWriteRepository.findById.mockResolvedValue(app);
-
+  it('should delegate to the app lookup port', async () => {
     const id = UuidValueObject.generate();
-    await expect(service.execute(id)).resolves.toBe(app);
+    appLookupPort.assertExists.mockResolvedValue(undefined);
+
+    await expect(service.execute(id)).resolves.toBeUndefined();
+
+    expect(appLookupPort.assertExists).toHaveBeenCalledWith(id.value);
   });
 
-  it('should throw AppNotFoundException when not found', async () => {
-    appWriteRepository.findById.mockResolvedValue(null);
+  it('should propagate errors from the app lookup port', async () => {
+    appLookupPort.assertExists.mockRejectedValue(new Error('not found'));
 
     await expect(service.execute(UuidValueObject.generate())).rejects.toThrow(
-      AppNotFoundException,
+      'not found',
     );
   });
 });
