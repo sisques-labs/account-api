@@ -13,8 +13,8 @@ import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenan
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TENANT_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
-import { AppLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/app-lookup.adapter';
-import { UserLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/user-lookup.adapter';
+import { AppLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/app-lookup/app-lookup.adapter';
+import { UserLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/user-lookup/user-lookup.adapter';
 import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant.entity';
 import { TenantMembershipEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant-membership.entity';
 import { TenantTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-typeorm.mapper';
