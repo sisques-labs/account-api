@@ -8,6 +8,7 @@ import { IUserWriteRepository } from '../../src/contexts/user/domain/repositorie
 import { UserModule } from '../../src/contexts/user/user.module';
 import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TenantRoleEnum } from '../../src/contexts/tenancy/domain/enums/tenant-role.enum';
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { ITenantMembershipReadRepository } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TENANT_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';
@@ -154,7 +155,7 @@ describe('Tenancy repositories (integration)', () => {
         .withId('550e8400-e29b-41d4-a716-446655440030')
         .withTenantId(TENANT_ID)
         .withUserId(USER_ID)
-        .withRole('owner')
+        .withRole(TenantRoleEnum.OWNER)
         .withCreatedAt(now)
         .withUpdatedAt(now)
         .build();
@@ -167,7 +168,7 @@ describe('Tenancy repositories (integration)', () => {
       );
 
       expect(found).not.toBeNull();
-      expect(found?.role.value).toBe('owner');
+      expect(found?.role.value).toBe(TenantRoleEnum.OWNER);
     });
 
     it('should enforce one membership per tenant+user', async () => {
@@ -180,7 +181,7 @@ describe('Tenancy repositories (integration)', () => {
           .withId('550e8400-e29b-41d4-a716-446655440031')
           .withTenantId(TENANT_ID)
           .withUserId(USER_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .withCreatedAt(now)
           .withUpdatedAt(now)
           .build(),
@@ -190,7 +191,7 @@ describe('Tenancy repositories (integration)', () => {
         .withId('550e8400-e29b-41d4-a716-446655440032')
         .withTenantId(TENANT_ID)
         .withUserId(USER_ID)
-        .withRole('member')
+        .withRole(TenantRoleEnum.MEMBER)
         .withCreatedAt(now)
         .withUpdatedAt(now)
         .build();
@@ -208,7 +209,7 @@ describe('Tenancy repositories (integration)', () => {
           .withId('550e8400-e29b-41d4-a716-446655440033')
           .withTenantId(TENANT_ID)
           .withUserId(USER_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .withCreatedAt(now)
           .withUpdatedAt(now)
           .build(),
@@ -217,7 +218,7 @@ describe('Tenancy repositories (integration)', () => {
       const members = await membershipReadRepo.findAllByTenantId(TENANT_ID);
 
       expect(members).toHaveLength(1);
-      expect(members[0].role).toBe('owner');
+      expect(members[0].role).toBe(TenantRoleEnum.OWNER);
     });
 
     it('should list all memberships of a user via the read repository', async () => {
@@ -230,7 +231,7 @@ describe('Tenancy repositories (integration)', () => {
           .withId('550e8400-e29b-41d4-a716-446655440034')
           .withTenantId(TENANT_ID)
           .withUserId(USER_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .withCreatedAt(now)
           .withUpdatedAt(now)
           .build(),

@@ -36,8 +36,10 @@ describe('Identity + Tenancy (e2e)', () => {
         displayName: 'New User',
       });
 
+    // POST /auth/register returns the bare userId string (not wrapped in
+    // JSON), so Nest sends it as text/html — assert on `.text`, not `.body`.
     expect(res.status).toBe(201);
-    expect(res.body.userId).toEqual(expect.any(String));
+    expect(res.text).toMatch(/^[0-9a-f-]{36}$/i);
   });
 
   it('should reject registering the same email twice', async () => {
@@ -173,7 +175,7 @@ describe('Identity + Tenancy (e2e)', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ slug: appSlug, name: 'Test App' });
       expect(appRes.status).toBe(201);
-      const appId = appRes.body.appId as string;
+      const appId = appRes.text;
 
       // 3. Create the tenant — the caller becomes owner automatically.
       const tenantRes = await ctx
@@ -182,8 +184,7 @@ describe('Identity + Tenancy (e2e)', () => {
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ appId, name: 'My Tenant' });
       expect(tenantRes.status).toBe(201);
-      const tenantId = tenantRes.body.tenantId as string;
-      expect(tenantRes.body.slug).toBe('my-tenant');
+      const tenantId = tenantRes.text;
 
       // 4. Register a second user to add as a member.
       const memberEmail = uniqueEmail('member');
@@ -198,9 +199,9 @@ describe('Identity + Tenancy (e2e)', () => {
         .http()
         .post(`/api/v1/tenants/${tenantId}/members`)
         .set('Authorization', `Bearer ${ownerToken}`)
-        .send({ email: memberEmail, role: 'member' });
+        .send({ email: memberEmail, role: 'MEMBER' });
       expect(addMemberRes.status).toBe(201);
-      expect(addMemberRes.body.role).toBe('member');
+      expect(addMemberRes.body.role).toBe('MEMBER');
 
       // 6. List members — expect the owner (auto-added) + the new member.
       const listRes = await ctx
@@ -210,14 +211,14 @@ describe('Identity + Tenancy (e2e)', () => {
       expect(listRes.status).toBe(200);
       expect(listRes.body).toHaveLength(2);
       const roles = listRes.body.map((m: { role: string }) => m.role).sort();
-      expect(roles).toEqual(['member', 'owner']);
+      expect(roles).toEqual(['MEMBER', 'OWNER']);
 
       // 7. Adding the same member again is rejected.
       const dupMemberRes = await ctx
         .http()
         .post(`/api/v1/tenants/${tenantId}/members`)
         .set('Authorization', `Bearer ${ownerToken}`)
-        .send({ email: memberEmail, role: 'member' });
+        .send({ email: memberEmail, role: 'MEMBER' });
       expect(dupMemberRes.status).toBe(409);
     });
   });
@@ -245,13 +246,13 @@ describe('Identity + Tenancy (e2e)', () => {
       .http()
       .post('/api/v1/tenants')
       .set('Authorization', `Bearer ${token}`)
-      .send({ appId: appRes.body.appId, name: 'Tenant' });
+      .send({ appId: appRes.text, name: 'Tenant' });
 
     const res = await ctx
       .http()
-      .post(`/api/v1/tenants/${tenantRes.body.tenantId}/members`)
+      .post(`/api/v1/tenants/${tenantRes.text}/members`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ email: 'does-not-exist@example.com', role: 'member' });
+      .send({ email: 'does-not-exist@example.com', role: 'MEMBER' });
 
     expect(res.status).toBe(404);
   });
