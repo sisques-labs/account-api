@@ -13,7 +13,6 @@ import {
 } from '@sisques-labs/nestjs-kit';
 
 export class UserAggregate extends BaseAggregate {
-  private readonly _id: UserIdValueObject;
   private readonly _externalId: ExternalIdValueObject;
   private readonly _email: UserEmailValueObject;
   private readonly _displayName: DisplayNameValueObject;
@@ -22,8 +21,7 @@ export class UserAggregate extends BaseAggregate {
   private _refreshTokenExpiresAt: DateValueObject | null;
 
   constructor(props: IUser) {
-    super(props.createdAt, props.updatedAt);
-    this._id = props.id;
+    super(props.id, props.createdAt, props.updatedAt);
     this._externalId = props.externalId;
     this._email = props.email;
     this._displayName = props.displayName;
@@ -35,13 +33,7 @@ export class UserAggregate extends BaseAggregate {
   public create(): void {
     this.apply(
       new UserRegisteredEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: UserAggregate.name,
-          entityId: this._id.value,
-          entityType: UserAggregate.name,
-          eventType: UserRegisteredEvent.name,
-        },
+        this.generateEventMetadata({ name: UserRegisteredEvent.name }),
         {
           id: this._id.value,
           externalId: this._externalId.value,

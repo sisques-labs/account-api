@@ -8,14 +8,12 @@ import { TenantRoleValueObject } from '@contexts/tenancy/domain/value-objects/te
 import { BaseAggregate, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 export class TenantMembershipAggregate extends BaseAggregate {
-  private readonly _id: UuidValueObject;
   private readonly _tenantId: UuidValueObject;
   private readonly _userId: UuidValueObject;
   private _role: TenantRoleValueObject;
 
   constructor(props: ITenantMembership) {
-    super(props.createdAt, props.updatedAt);
-    this._id = props.id;
+    super(props.id, props.createdAt, props.updatedAt);
     this._tenantId = props.tenantId;
     this._userId = props.userId;
     this._role = props.role;
@@ -24,13 +22,7 @@ export class TenantMembershipAggregate extends BaseAggregate {
   public create(): void {
     this.apply(
       new TenantMembershipCreatedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: TenantMembershipAggregate.name,
-          entityId: this._id.value,
-          entityType: TenantMembershipAggregate.name,
-          eventType: TenantMembershipCreatedEvent.name,
-        },
+        this.generateEventMetadata({ name: TenantMembershipCreatedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -48,13 +40,7 @@ export class TenantMembershipAggregate extends BaseAggregate {
 
     this.apply(
       new TenantMembershipUpdatedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: TenantMembershipAggregate.name,
-          entityId: this._id.value,
-          entityType: TenantMembershipAggregate.name,
-          eventType: TenantMembershipUpdatedEvent.name,
-        },
+        this.generateEventMetadata({ name: TenantMembershipUpdatedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -63,13 +49,7 @@ export class TenantMembershipAggregate extends BaseAggregate {
   public delete(): void {
     this.apply(
       new TenantMembershipDeletedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: TenantMembershipAggregate.name,
-          entityId: this._id.value,
-          entityType: TenantMembershipAggregate.name,
-          eventType: TenantMembershipDeletedEvent.name,
-        },
+        this.generateEventMetadata({ name: TenantMembershipDeletedEvent.name }),
         this.toPrimitives(),
       ),
     );
@@ -87,13 +67,9 @@ export class TenantMembershipAggregate extends BaseAggregate {
 
     this.apply(
       new TenantMembershipRoleChangedEvent(
-        {
-          aggregateRootId: this._id.value,
-          aggregateRootType: TenantMembershipAggregate.name,
-          entityId: this._id.value,
-          entityType: TenantMembershipAggregate.name,
-          eventType: TenantMembershipRoleChangedEvent.name,
-        },
+        this.generateEventMetadata({
+          name: TenantMembershipRoleChangedEvent.name,
+        }),
         {
           id: this._id.value,
           oldValue: oldValue,
