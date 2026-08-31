@@ -1,6 +1,6 @@
 import { TenantMembershipFindByTenantIdQuery } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.query';
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
-import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-not-found.exception';
+import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-not-found.exception';
 import { ITenantMembershipReadRepository } from '@contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 

@@ -1,5 +1,5 @@
 import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
-import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-slug-already-exists.exception';
+import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-slug-already-exists.exception';
 import { ITenantWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';

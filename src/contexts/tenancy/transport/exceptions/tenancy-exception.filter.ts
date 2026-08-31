@@ -1,7 +1,7 @@
-import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/member-user-not-found.exception';
-import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership-already-exists.exception';
-import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-not-found.exception';
-import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-slug-already-exists.exception';
+import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-membership/member-user-not-found.exception';
+import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership/tenant-membership-already-exists.exception';
+import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-not-found.exception';
+import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-slug-already-exists.exception';
 import { HttpStatus } from '@nestjs/common';
 import { BaseException } from '@sisques-labs/nestjs-kit';
 

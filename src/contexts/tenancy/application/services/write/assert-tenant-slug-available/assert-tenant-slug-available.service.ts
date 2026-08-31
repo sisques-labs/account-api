@@ -1,4 +1,4 @@
-import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-slug-already-exists.exception';
+import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-slug-already-exists.exception';
 import {
   ITenantWriteRepository,
   TENANT_WRITE_REPOSITORY,

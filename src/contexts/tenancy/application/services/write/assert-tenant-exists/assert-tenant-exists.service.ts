@@ -1,5 +1,5 @@
 import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
-import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-not-found.exception';
+import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-not-found.exception';
 import {
   ITenantWriteRepository,
   TENANT_WRITE_REPOSITORY,

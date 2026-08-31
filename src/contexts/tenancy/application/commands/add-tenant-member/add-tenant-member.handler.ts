@@ -8,7 +8,7 @@ import { AssertTenantExistsService } from '@contexts/tenancy/application/service
 import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
 import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership/tenant-membership.aggregate';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
-import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/member-user-not-found.exception';
+import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-membership/member-user-not-found.exception';
 import {
   ITenantMembershipWriteRepository,
   TENANT_MEMBERSHIP_WRITE_REPOSITORY,

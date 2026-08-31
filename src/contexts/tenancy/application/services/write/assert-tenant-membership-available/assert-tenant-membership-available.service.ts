@@ -1,4 +1,4 @@
-import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership-already-exists.exception';
+import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership/tenant-membership-already-exists.exception';
 import {
   ITenantMembershipWriteRepository,
   TENANT_MEMBERSHIP_WRITE_REPOSITORY,
