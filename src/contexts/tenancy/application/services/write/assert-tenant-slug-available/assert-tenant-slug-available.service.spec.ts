@@ -1,4 +1,4 @@
-import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant.aggregate';
+import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
 import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-slug-already-exists.exception';
 import { ITenantWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';

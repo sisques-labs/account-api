@@ -1,4 +1,4 @@
-import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership.aggregate';
+import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership/tenant-membership.aggregate';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 import { TenantMembershipEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant-membership.entity';

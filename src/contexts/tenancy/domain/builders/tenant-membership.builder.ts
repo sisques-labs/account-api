@@ -1,4 +1,4 @@
-import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership.aggregate';
+import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership/tenant-membership.aggregate';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 import { TenantRoleValueObject } from '@contexts/tenancy/domain/value-objects/tenant-role/tenant-role.vo';
 import { Injectable } from '@nestjs/common';

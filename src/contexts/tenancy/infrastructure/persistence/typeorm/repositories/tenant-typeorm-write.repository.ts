@@ -1,4 +1,4 @@
-import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant.aggregate';
+import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
 import { ITenantWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant.entity';
 import { TenantTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-typeorm.mapper';

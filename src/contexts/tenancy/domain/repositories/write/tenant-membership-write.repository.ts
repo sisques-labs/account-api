@@ -1,4 +1,4 @@
-import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership.aggregate';
+import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership/tenant-membership.aggregate';
 import { IBaseWriteRepository } from '@sisques-labs/nestjs-kit';
 
 export const TENANT_MEMBERSHIP_WRITE_REPOSITORY = Symbol(

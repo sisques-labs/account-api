@@ -1,4 +1,4 @@
-import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant.aggregate';
+import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
 import { TenantNameValueObject } from '@contexts/tenancy/domain/value-objects/tenant-name/tenant-name.vo';
 import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';
 import { Injectable } from '@nestjs/common';
