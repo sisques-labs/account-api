@@ -30,12 +30,12 @@ export class AppTypeOrmMapper {
   }
 
   public toViewModel(entity: AppEntity): AppViewModel {
-    return new AppViewModel({
-      id: entity.id,
-      slug: entity.slug,
-      name: entity.name,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    });
+    return this.appBuilder
+      .withId(entity.id)
+      .withSlug(entity.slug)
+      .withName(entity.name)
+      .withCreatedAt(entity.createdAt)
+      .withUpdatedAt(entity.updatedAt)
+      .buildViewModel();
   }
 }
