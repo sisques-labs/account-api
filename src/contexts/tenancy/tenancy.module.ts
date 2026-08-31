@@ -8,8 +8,8 @@ import { AssertAppExistsService } from '@contexts/tenancy/application/services/w
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
 import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
-import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant.builder';
-import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
+import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TENANT_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';

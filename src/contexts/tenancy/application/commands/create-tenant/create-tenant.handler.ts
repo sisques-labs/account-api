@@ -2,8 +2,8 @@ import { CreateTenantCommand } from '@contexts/tenancy/application/commands/crea
 import { ICreateTenantResult } from '@contexts/tenancy/application/commands/create-tenant/create-tenant-result.interface';
 import { AssertAppExistsService } from '@contexts/tenancy/application/services/write/assert-app-exists/assert-app-exists.service';
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
-import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant.builder';
-import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
+import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
 import {
   ITenantWriteRepository,
   TENANT_WRITE_REPOSITORY,

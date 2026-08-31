@@ -1,5 +1,5 @@
 import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
-import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant.builder';
+import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant.entity';
 import { Injectable } from '@nestjs/common';
 

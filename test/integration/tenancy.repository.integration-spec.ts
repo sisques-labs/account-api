@@ -6,8 +6,8 @@ import { UserBuilder } from '../../src/contexts/user/domain/builders/user.builde
 import { USER_WRITE_REPOSITORY } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
 import { IUserWriteRepository } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
 import { UserModule } from '../../src/contexts/user/user.module';
-import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant.builder';
-import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant/tenant.builder';
+import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { ITenantMembershipReadRepository } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TENANT_WRITE_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/write/tenant-write.repository';

@@ -1,4 +1,4 @@
-import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant.builder';
+import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantCreatedEvent } from '@contexts/tenancy/domain/events/tenant-created/tenant-created.event';
 
 import { TenantAggregate } from './tenant.aggregate';

@@ -1,4 +1,4 @@
-import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
 import { TenantMembershipCreatedEvent } from '@contexts/tenancy/domain/events/tenant-membership-created/tenant-membership-created.event';
 
 import { TenantMembershipAggregate } from './tenant-membership.aggregate';

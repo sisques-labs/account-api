@@ -2,7 +2,7 @@ import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/a
 import { IUserLookupPort } from '@contexts/tenancy/application/ports/user-lookup.port';
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
 import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
-import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership.builder';
+import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
 import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/member-user-not-found.exception';
 import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership-already-exists.exception';
 import { ITenantMembershipWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
