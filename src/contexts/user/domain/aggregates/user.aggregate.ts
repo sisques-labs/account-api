@@ -10,7 +10,7 @@ import { BaseAggregate, BooleanValueObject } from '@sisques-labs/nestjs-kit';
 export class UserAggregate extends BaseAggregate {
   private readonly _externalId: ExternalIdValueObject;
   private readonly _email: UserEmailValueObject;
-  private readonly _displayName: DisplayNameValueObject | undefined;
+  private _displayName?: DisplayNameValueObject;
   private readonly _platformAdmin: BooleanValueObject;
 
   constructor(props: IUser) {
@@ -25,12 +25,7 @@ export class UserAggregate extends BaseAggregate {
     this.apply(
       new UserRegisteredEvent(
         this.generateEventMetadata({ name: UserRegisteredEvent.name }),
-        {
-          id: this._id.value,
-          externalId: this._externalId.value,
-          email: this._email.value,
-          displayName: this._displayName?.value ?? null,
-        },
+        this.toPrimitives(),
       ),
     );
   }
