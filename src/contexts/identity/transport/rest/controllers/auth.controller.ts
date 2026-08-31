@@ -1,5 +1,5 @@
 import { LoginUserCommand } from '@contexts/identity/application/commands/login-user/login-user.command';
-import { ILoginSessionResult } from '@contexts/identity/application/commands/login-user/login-session-result.interface';
+import { ILoginSessionResult } from '@contexts/identity/application/commands/login-user/login-user.handler';
 import { RefreshSessionCommand } from '@contexts/identity/application/commands/refresh-session/refresh-session.command';
 import {
   RegisterUserCommand,

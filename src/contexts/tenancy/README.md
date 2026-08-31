@@ -128,7 +128,7 @@ login/refresh) — see `identity`'s README.
 |-------|-------------|
 | `CreateTenantCommand` | Creates a tenant + owner membership for the creator |
 | `AddTenantMemberCommand` | Adds an existing user (by email) as a member |
-| `AppFindAllQuery` | Lists all apps — lives in `app` context |
+| `AppFindByCriteriaQuery` | Lists apps with pagination/filters — lives in `app` context |
 | `TenantMembershipFindByTenantIdQuery` | Lists a tenant's members |
 | `TenantMembershipFindByUserIdQuery` | Lists a user's memberships — consumed cross-context by `identity` |
 

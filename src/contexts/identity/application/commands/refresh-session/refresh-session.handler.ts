@@ -1,4 +1,3 @@
-import { ILoginSessionResult } from '@contexts/identity/application/commands/login-user/login-session-result.interface';
 import { RefreshSessionCommand } from '@contexts/identity/application/commands/refresh-session/refresh-session.command';
 import {
   ITenantMembershipLookupPort,
@@ -15,6 +14,7 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
+import { ILoginSessionResult } from '@contexts/identity/application/commands/login-user/login-user.handler';
 
 @CommandHandler(RefreshSessionCommand)
 export class RefreshSessionCommandHandler implements ICommandHandler<RefreshSessionCommand> {

@@ -1,5 +1,5 @@
 import { CreateAppCommandHandler } from '@contexts/app/application/commands/create-app/create-app.handler';
-import { AppFindAllQueryHandler } from '@contexts/app/application/queries/app-find-all/app-find-all.handler';
+import { AppFindByCriteriaQueryHandler } from '@contexts/app/application/queries/app-find-by-criteria/app-find-by-criteria.handler';
 import { AppFindByIdQueryHandler } from '@contexts/app/application/queries/app-find-by-id/app-find-by-id.handler';
 import { AssertAppExistsService } from '@contexts/app/application/services/write/assert-app-exists/assert-app-exists.service';
 import { AssertAppSlugAvailableService } from '@contexts/app/application/services/write/assert-app-slug-available/assert-app-slug-available.service';
@@ -18,7 +18,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 const COMMAND_HANDLERS = [CreateAppCommandHandler];
 
-const QUERY_HANDLERS = [AppFindAllQueryHandler, AppFindByIdQueryHandler];
+const QUERY_HANDLERS = [
+  AppFindByCriteriaQueryHandler,
+  AppFindByIdQueryHandler,
+];
 
 const APPLICATION_SERVICES = [
   AssertAppSlugAvailableService,

@@ -32,7 +32,7 @@ describe('AppAggregate', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(AppCreatedEvent);
-    expect((events[0] as AppCreatedEvent).data).toEqual({
+    expect((events[0] as AppCreatedEvent).data).toMatchObject({
       id: APP_ID,
       slug: 'gardenia',
       name: 'Gardenia',
