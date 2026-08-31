@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "Sisques Labs Account API",
   "author": "Sisques Labs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sisques-labs/account-api.git"
+  },
+  "homepage": "https://github.com/sisques-labs/account-api",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
