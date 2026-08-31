@@ -40,13 +40,13 @@ export class TenantMembershipTypeOrmMapper {
   public toViewModel(
     entity: TenantMembershipEntity,
   ): TenantMembershipViewModel {
-    return new TenantMembershipViewModel({
-      id: entity.id,
-      tenantId: entity.tenantId,
-      userId: entity.userId,
-      role: entity.role,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    });
+    return this.tenantMembershipBuilder
+      .withId(entity.id)
+      .withTenantId(entity.tenantId)
+      .withUserId(entity.userId)
+      .withRole(entity.role)
+      .withCreatedAt(entity.createdAt)
+      .withUpdatedAt(entity.updatedAt)
+      .buildViewModel();
   }
 }
