@@ -64,15 +64,28 @@ describe('TenantBuilder', () => {
   });
 
   describe('buildViewModel()', () => {
-    it('should always throw — no tenant read side exists in the MVP', () => {
+    it('should build a TenantViewModel when all required fields are set', () => {
+      const viewModel = builder
+        .withId('550e8400-e29b-41d4-a716-446655440020')
+        .withAppId(APP_ID)
+        .withName('My Garden')
+        .withSlug('my-garden')
+        .withCreatedAt(NOW)
+        .withUpdatedAt(NOW)
+        .buildViewModel();
+
+      expect(viewModel.slug).toBe('my-garden');
+      expect(viewModel.appId).toBe(APP_ID);
+    });
+
+    it('should throw when a required field is missing', () => {
       expect(() =>
         builder
           .withId('550e8400-e29b-41d4-a716-446655440020')
-          .withAppId(APP_ID)
           .withName('My Garden')
           .withSlug('my-garden')
           .buildViewModel(),
-      ).toThrow('not implemented');
+      ).toThrow(FieldIsRequiredException);
     });
   });
 });

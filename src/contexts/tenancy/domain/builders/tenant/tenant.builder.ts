@@ -1,6 +1,7 @@
 import { TenantAggregate } from '@contexts/tenancy/domain/aggregates/tenant/tenant.aggregate';
 import { TenantNameValueObject } from '@contexts/tenancy/domain/value-objects/tenant-name/tenant-name.vo';
 import { TenantSlugValueObject } from '@contexts/tenancy/domain/value-objects/tenant-slug/tenant-slug.vo';
+import { TenantViewModel } from '@contexts/tenancy/domain/view-models/tenant.view-model';
 import { Injectable } from '@nestjs/common';
 import {
   BaseBuilder,
@@ -9,13 +10,11 @@ import {
   UuidValueObject,
 } from '@sisques-labs/nestjs-kit';
 
-/**
- * Tenant has no read side / view-model in the MVP — no query endpoint lists
- * tenants yet (only `POST /tenants`), so `buildViewModel()` is intentionally
- * unimplemented. Add it (and a TenantViewModel) when a tenant query lands.
- */
 @Injectable()
-export class TenantBuilder extends BaseBuilder<TenantAggregate, never> {
+export class TenantBuilder extends BaseBuilder<
+  TenantAggregate,
+  TenantViewModel
+> {
   private _appId!: string;
   private _name!: string;
   private _slug!: string;
@@ -55,9 +54,16 @@ export class TenantBuilder extends BaseBuilder<TenantAggregate, never> {
     });
   }
 
-  public override buildViewModel(): never {
-    throw new Error(
-      'TenantBuilder.buildViewModel() is not implemented — no tenant read side exists in the MVP.',
-    );
+  public override buildViewModel(): TenantViewModel {
+    this.validate();
+
+    return new TenantViewModel({
+      id: this._id,
+      appId: this._appId,
+      name: this._name,
+      slug: this._slug,
+      createdAt: this._createdAt ?? new Date(),
+      updatedAt: this._updatedAt ?? new Date(),
+    });
   }
 }

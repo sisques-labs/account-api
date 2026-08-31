@@ -4,6 +4,7 @@ import { DeleteTenantCommandHandler } from '@contexts/tenancy/application/comman
 import { UpdateTenantCommandHandler } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.handler';
 import { APP_LOOKUP_PORT } from '@contexts/tenancy/application/ports/app-lookup.port';
 import { USER_LOOKUP_PORT } from '@contexts/tenancy/application/ports/user-lookup.port';
+import { TenantFindByCriteriaQueryHandler } from '@contexts/tenancy/application/queries/tenant-find-by-criteria/tenant-find-by-criteria.handler';
 import { TenantMembershipFindByTenantIdQueryHandler } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.handler';
 import { TenantMembershipFindByUserIdQueryHandler } from '@contexts/tenancy/application/queries/tenant-membership-find-by-user-id/tenant-membership-find-by-user-id.handler';
 import { AssertAppExistsService } from '@contexts/tenancy/application/services/write/assert-app-exists/assert-app-exists.service';
@@ -13,6 +14,7 @@ import { AssertTenantOwnerService } from '@contexts/tenancy/application/services
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
 import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TENANT_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-read.repository';
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
 import { TENANT_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
 import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
@@ -22,11 +24,13 @@ import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeo
 import { TenantMembershipEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant-membership.entity';
 import { TenantTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-typeorm.mapper';
 import { TenantMembershipTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-membership-typeorm.mapper';
+import { TenantTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-typeorm-read.repository';
 import { TenantTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-typeorm-write.repository';
 import { TenantMembershipTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-read.repository';
 import { TenantMembershipTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-write.repository';
 import { TenantsController } from '@contexts/tenancy/transport/rest/controllers/tenants.controller';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -39,6 +43,7 @@ const COMMAND_HANDLERS = [
 ];
 
 const QUERY_HANDLERS = [
+  TenantFindByCriteriaQueryHandler,
   TenantMembershipFindByTenantIdQueryHandler,
   TenantMembershipFindByUserIdQueryHandler,
 ];
@@ -68,6 +73,7 @@ const INFRASTRUCTURE_REPOSITORIES = [
     provide: TENANT_MEMBERSHIP_READ_REPOSITORY,
     useClass: TenantMembershipTypeOrmReadRepository,
   },
+  { provide: TENANT_READ_REPOSITORY, useClass: TenantTypeOrmReadRepository },
 ];
 
 const INFRASTRUCTURE_ENTITIES = [TenantEntity, TenantMembershipEntity];
@@ -77,7 +83,7 @@ const INFRASTRUCTURE_ADAPTERS = [
   { provide: USER_LOOKUP_PORT, useClass: UserLookupAdapter },
 ];
 
-const TRANSPORT_MAPPERS = [TenantMembershipRestMapper];
+const TRANSPORT_MAPPERS = [TenantMembershipRestMapper, TenantRestMapper];
 
 const TRANSPORT_REST_CONTROLLERS = [TenantsController];
 

@@ -19,6 +19,7 @@ import { SessionEntity } from '@contexts/auth/infrastructure/persistence/typeorm
 import { SessionTypeOrmMapper } from '@contexts/auth/infrastructure/persistence/typeorm/mappers/session-typeorm.mapper';
 import { SessionTypeOrmWriteRepository } from '@contexts/auth/infrastructure/persistence/typeorm/repositories/session-typeorm-write.repository';
 import { AuthController } from '@contexts/auth/transport/rest/controllers/auth.controller';
+import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -67,6 +68,7 @@ const TRANSPORT_REST_CONTROLLERS = [AuthController];
 @Module({
   imports: [
     CqrsModule,
+    HttpModule,
     TypeOrmModule.forFeature(INFRASTRUCTURE_ENTITIES),
     // JwtService itself comes from the global `SecurityModule` (imported
     // once in CoreModule) — TokenSignService/TokenVerifyService just inject

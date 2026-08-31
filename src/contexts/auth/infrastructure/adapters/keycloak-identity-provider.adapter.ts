@@ -5,23 +5,30 @@ import { IVerifyCredentialsInput } from '@contexts/auth/application/ports/verify
 import { IVerifyCredentialsResult } from '@contexts/auth/application/ports/verify-credentials-result.interface';
 import { EmailAlreadyRegisteredException } from '@contexts/auth/domain/exceptions/email-already-registered.exception';
 import { IKeycloakTokenResponse } from '@contexts/auth/infrastructure/adapters/keycloak-token-response.interface';
+import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AxiosError, AxiosResponse } from 'axios';
+import { firstValueFrom } from 'rxjs';
 
 /**
  * The ONE identity-provider adapter for the MVP (Keycloak, self-hosted).
  * Implements IIdentityProviderPort so a future adapter (e.g. Cognito) can be
  * swapped in without touching the domain/application layers — see the
  * `auth` context README and the architecture doc's "Proveedor de
- * identidad" section. Talks to Keycloak over plain HTTP (Admin REST API for
- * user creation, the token endpoint for credential verification) — Sisques
- * Account is the ONLY caller of Keycloak; apps never talk to it directly.
+ * identidad" section. Talks to Keycloak over HTTP via Nest's `HttpService`
+ * (Admin REST API for user creation, the token endpoint for credential
+ * verification) — Sisques Account is the ONLY caller of Keycloak; apps
+ * never talk to it directly.
  */
 @Injectable()
 export class KeycloakIdentityProviderAdapter implements IIdentityProviderPort {
   private readonly logger = new Logger(KeycloakIdentityProviderAdapter.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async registerIdentity(
     input: IRegisterIdentityInput,
@@ -33,39 +40,38 @@ export class KeycloakIdentityProviderAdapter implements IIdentityProviderPort {
     const [firstName, ...rest] = nameSource.split(/\s+/);
     const lastName = rest.length > 0 ? rest.join(' ') : firstName;
 
-    const response = await fetch(
-      `${this.baseUrl}/admin/realms/${this.realm}/users`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: input.email,
-          email: input.email,
-          firstName,
-          lastName,
-          enabled: true,
-          emailVerified: true,
-          credentials: [
-            { type: 'password', value: input.password, temporary: false },
-          ],
-        }),
-      },
-    );
-
-    if (response.status === 409) {
-      throw new EmailAlreadyRegisteredException(input.email);
-    }
-    if (!response.ok) {
-      const body = await response.text();
+    let response: AxiosResponse<unknown>;
+    try {
+      response = await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/admin/realms/${this.realm}/users`,
+          {
+            username: input.email,
+            email: input.email,
+            firstName,
+            lastName,
+            enabled: true,
+            emailVerified: true,
+            credentials: [
+              { type: 'password', value: input.password, temporary: false },
+            ],
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      );
+    } catch (error) {
+      const status = (error as AxiosError).response?.status;
+      if (status === 409) {
+        throw new EmailAlreadyRegisteredException(input.email);
+      }
       throw new Error(
-        `Keycloak user creation failed (${response.status}): ${body}`,
+        `Keycloak user creation failed (${status}): ${JSON.stringify(
+          (error as AxiosError).response?.data,
+        )}`,
       );
     }
 
-    const location = response.headers.get('location');
+    const location = response.headers['location'] as string | undefined;
     const externalId = location?.split('/').pop();
     if (!externalId) {
       throw new Error(
@@ -82,51 +88,49 @@ export class KeycloakIdentityProviderAdapter implements IIdentityProviderPort {
   ): Promise<IVerifyCredentialsResult> {
     this.logger.log(`Verifying credentials in Keycloak: ${input.email}`);
 
-    const response = await fetch(
-      `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'password',
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          username: input.email,
-          password: input.password,
-        }),
-      },
-    );
-
-    if (!response.ok) {
+    let response: AxiosResponse<IKeycloakTokenResponse>;
+    try {
+      response = await firstValueFrom(
+        this.httpService.post<IKeycloakTokenResponse>(
+          `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/token`,
+          new URLSearchParams({
+            grant_type: 'password',
+            client_id: this.clientId,
+            client_secret: this.clientSecret,
+            username: input.email,
+            password: input.password,
+          }),
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+        ),
+      );
+    } catch {
       throw new Error('Keycloak rejected the credentials');
     }
 
-    const body = (await response.json()) as IKeycloakTokenResponse;
-    return { externalId: this.decodeSub(body.access_token) };
+    return { externalId: this.decodeSub(response.data.access_token) };
   }
 
   private async getServiceAccountToken(): Promise<string> {
-    const response = await fetch(
-      `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-        }),
-      },
-    );
-
-    if (!response.ok) {
+    let response: AxiosResponse<IKeycloakTokenResponse>;
+    try {
+      response = await firstValueFrom(
+        this.httpService.post<IKeycloakTokenResponse>(
+          `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/token`,
+          new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: this.clientId,
+            client_secret: this.clientSecret,
+          }),
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+        ),
+      );
+    } catch (error) {
       throw new Error(
-        `Failed to obtain a Keycloak service-account token (${response.status})`,
+        `Failed to obtain a Keycloak service-account token (${(error as AxiosError).response?.status})`,
       );
     }
 
-    const body = (await response.json()) as IKeycloakTokenResponse;
-    return body.access_token;
+    return response.data.access_token;
   }
 
   private decodeSub(jwt: string): string {

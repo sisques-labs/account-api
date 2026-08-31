@@ -1,20 +1,26 @@
 import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.command';
-import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member-result.interface';
+import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.handler';
 import { CreateTenantCommand } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.command';
 import { DeleteTenantCommand } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.command';
 import { UpdateTenantCommand } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.command';
+import { TenantFindByCriteriaQuery } from '@contexts/tenancy/application/queries/tenant-find-by-criteria/tenant-find-by-criteria.query';
 import { TenantMembershipFindByTenantIdQuery } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.query';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
+import { TenantViewModel } from '@contexts/tenancy/domain/view-models/tenant.view-model';
 import { AddTenantMemberDto } from '@contexts/tenancy/transport/rest/dtos/add-tenant-member.dto';
 import { CreateTenantDto } from '@contexts/tenancy/transport/rest/dtos/create-tenant.dto';
+import { TenantCriteriaDto } from '@contexts/tenancy/transport/rest/dtos/tenant-criteria.dto';
 import { TenantMembershipRestResponseDto } from '@contexts/tenancy/transport/rest/dtos/tenant-membership-rest-response.dto';
+import { TenantRestResponseDto } from '@contexts/tenancy/transport/rest/dtos/tenant-rest-response.dto';
 import { UpdateTenantDto } from '@contexts/tenancy/transport/rest/dtos/update-tenant.dto';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
 import {
   CurrentUser,
   CurrentUserPayload,
 } from '@core/security/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@core/security/guards/jwt-auth.guard';
+import { PlatformAdminGuard } from '@core/security/guards/platform-admin.guard';
 import {
   Body,
   Controller,
@@ -27,6 +33,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -36,6 +43,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import {
+  Criteria,
+  Filter,
+  FilterOperator,
+  PaginatedResult,
+} from '@sisques-labs/nestjs-kit';
 
 @ApiTags('tenants')
 @ApiBearerAuth()
@@ -48,7 +61,72 @@ export class TenantsController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
     private readonly tenantMembershipRestMapper: TenantMembershipRestMapper,
+    private readonly tenantRestMapper: TenantRestMapper,
   ) {}
+
+  @Get()
+  @UseGuards(PlatformAdminGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List all tenants — platform admin only' })
+  @ApiResponse({ status: 200, description: 'Paginated tenants list' })
+  @ApiResponse({ status: 403, description: 'Caller is not a platform admin' })
+  async findByCriteria(
+    @Query() query: TenantCriteriaDto,
+  ): Promise<PaginatedResult<TenantRestResponseDto>> {
+    this.logger.log(`GET /tenants ${JSON.stringify(query)}`);
+
+    const filters: Filter[] = [];
+    if (query.id) {
+      filters.push({
+        field: 'id',
+        operator: FilterOperator.EQUALS,
+        value: query.id,
+      });
+    }
+    if (query.appId) {
+      filters.push({
+        field: 'appId',
+        operator: FilterOperator.EQUALS,
+        value: query.appId,
+      });
+    }
+    if (query.slug) {
+      filters.push({
+        field: 'slug',
+        operator: FilterOperator.LIKE,
+        value: query.slug,
+      });
+    }
+    if (query.name) {
+      filters.push({
+        field: 'name',
+        operator: FilterOperator.LIKE,
+        value: query.name,
+      });
+    }
+
+    const pagination =
+      query.page || query.limit
+        ? { page: query.page ?? 1, perPage: query.limit ?? 20 }
+        : undefined;
+
+    const criteria = new Criteria(filters, undefined, pagination);
+    const result = await this.queryBus.execute<
+      TenantFindByCriteriaQuery,
+      PaginatedResult<TenantViewModel>
+    >(new TenantFindByCriteriaQuery({ criteria }));
+
+    const items = result.items.map((tenant) =>
+      this.tenantRestMapper.toResponseDto(tenant),
+    );
+
+    return new PaginatedResult(
+      items,
+      result.total,
+      result.page,
+      result.perPage,
+    );
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

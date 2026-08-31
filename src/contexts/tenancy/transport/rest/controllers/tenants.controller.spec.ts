@@ -2,12 +2,16 @@ import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/a
 import { CreateTenantCommand } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.command';
 import { DeleteTenantCommand } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.command';
 import { UpdateTenantCommand } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.command';
+import { TenantFindByCriteriaQuery } from '@contexts/tenancy/application/queries/tenant-find-by-criteria/tenant-find-by-criteria.query';
 import { TenantMembershipFindByTenantIdQuery } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.query';
 import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
+import { TenantViewModel } from '@contexts/tenancy/domain/view-models/tenant.view-model';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
 import { CurrentUserPayload } from '@core/security/decorators/current-user.decorator';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { FilterOperator, PaginatedResult } from '@sisques-labs/nestjs-kit';
 
 import { TenantsController } from './tenants.controller';
 
@@ -16,6 +20,7 @@ describe('TenantsController', () => {
   let commandBus: jest.Mocked<CommandBus>;
   let queryBus: jest.Mocked<QueryBus>;
   let tenantMembershipRestMapper: jest.Mocked<TenantMembershipRestMapper>;
+  let tenantRestMapper: jest.Mocked<TenantRestMapper>;
 
   const currentUser: CurrentUserPayload = {
     userId: '550e8400-e29b-41d4-a716-446655440000',
@@ -30,11 +35,67 @@ describe('TenantsController', () => {
     tenantMembershipRestMapper = {
       toResponseDto: jest.fn(),
     } as unknown as jest.Mocked<TenantMembershipRestMapper>;
+    tenantRestMapper = {
+      toResponseDto: jest.fn(),
+    } as unknown as jest.Mocked<TenantRestMapper>;
     controller = new TenantsController(
       commandBus,
       queryBus,
       tenantMembershipRestMapper,
+      tenantRestMapper,
     );
+  });
+
+  it('should dispatch a TenantFindByCriteriaQuery and map results through TenantRestMapper', async () => {
+    const viewModel = new TenantViewModel({
+      id: 'tenant-1',
+      appId: 'app-1',
+      name: 'My Garden',
+      slug: 'my-garden',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    queryBus.execute.mockResolvedValue(
+      new PaginatedResult([viewModel], 1, 1, 10),
+    );
+    tenantRestMapper.toResponseDto.mockReturnValue({
+      id: 'tenant-1',
+      appId: 'app-1',
+      name: 'My Garden',
+      slug: 'my-garden',
+      createdAt: viewModel.createdAt,
+      updatedAt: viewModel.updatedAt,
+    });
+
+    const result = await controller.findByCriteria({});
+
+    expect(queryBus.execute).toHaveBeenCalledWith(
+      expect.any(TenantFindByCriteriaQuery),
+    );
+    expect(tenantRestMapper.toResponseDto).toHaveBeenCalledWith(viewModel);
+    expect(result.items).toEqual([
+      expect.objectContaining({ id: 'tenant-1', slug: 'my-garden' }),
+    ]);
+    expect(result.total).toBe(1);
+  });
+
+  it('should build criteria from URL query parameters', async () => {
+    queryBus.execute.mockResolvedValue(new PaginatedResult([], 0, 2, 5));
+
+    await controller.findByCriteria({
+      slug: 'garden',
+      name: 'Gar',
+      page: 2,
+      limit: 5,
+    });
+
+    const query = queryBus.execute.mock
+      .calls[0][0] as TenantFindByCriteriaQuery;
+    expect(query.criteria.filters).toEqual([
+      { field: 'slug', operator: FilterOperator.LIKE, value: 'garden' },
+      { field: 'name', operator: FilterOperator.LIKE, value: 'Gar' },
+    ]);
+    expect(query.criteria.pagination).toEqual({ page: 2, perPage: 5 });
   });
 
   it('should dispatch a CreateTenantCommand using the current user as creator', async () => {

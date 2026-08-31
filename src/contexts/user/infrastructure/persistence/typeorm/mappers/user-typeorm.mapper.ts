@@ -34,14 +34,14 @@ export class UserTypeOrmMapper {
   }
 
   public toViewModel(entity: UserEntity): UserViewModel {
-    return new UserViewModel({
-      id: entity.id,
-      externalId: entity.externalId,
-      email: entity.email,
-      displayName: entity.displayName,
-      platformAdmin: entity.platformAdmin,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-    });
+    return this.userBuilder
+      .withId(entity.id)
+      .withExternalId(entity.externalId)
+      .withEmail(entity.email)
+      .withDisplayName(entity.displayName ?? undefined)
+      .withPlatformAdmin(entity.platformAdmin)
+      .withCreatedAt(entity.createdAt)
+      .withUpdatedAt(entity.updatedAt)
+      .buildViewModel();
   }
 }

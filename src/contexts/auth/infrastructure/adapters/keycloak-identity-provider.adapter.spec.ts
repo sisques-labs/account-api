@@ -1,5 +1,8 @@
 import { EmailAlreadyRegisteredException } from '@contexts/auth/domain/exceptions/email-already-registered.exception';
+import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { AxiosError, AxiosResponse } from 'axios';
+import { of, throwError } from 'rxjs';
 
 import { KeycloakIdentityProviderAdapter } from './keycloak-identity-provider.adapter';
 
@@ -16,37 +19,62 @@ const CONFIG: Record<string, string> = {
 // endpoint over HTTPS/localhost, in the same request/response cycle).
 const FAKE_KEYCLOAK_JWT = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiJrYy1zdWItMTIzIn0.sig';
 
+function axiosResponse<T>(
+  data: T,
+  headers: Record<string, string> = {},
+): AxiosResponse<T> {
+  return {
+    data,
+    status: 200,
+    statusText: 'OK',
+    headers,
+    config: {} as AxiosResponse['config'],
+  } as AxiosResponse<T>;
+}
+
+function axiosError(status: number): AxiosError {
+  return {
+    isAxiosError: true,
+    name: 'AxiosError',
+    message: 'Request failed',
+    response: {
+      status,
+      data: undefined,
+      statusText: '',
+      headers: {},
+      config: {} as AxiosResponse['config'],
+    },
+    toJSON: () => ({}),
+  } as unknown as AxiosError;
+}
+
 describe('KeycloakIdentityProviderAdapter', () => {
   let adapter: KeycloakIdentityProviderAdapter;
   let configService: jest.Mocked<ConfigService>;
-  let fetchMock: jest.Mock;
+  let httpService: jest.Mocked<HttpService>;
 
   beforeEach(() => {
     configService = {
       getOrThrow: jest.fn((key: string) => CONFIG[key]),
     } as unknown as jest.Mocked<ConfigService>;
-    adapter = new KeycloakIdentityProviderAdapter(configService);
-    fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    httpService = { post: jest.fn() } as unknown as jest.Mocked<HttpService>;
+    adapter = new KeycloakIdentityProviderAdapter(httpService, configService);
   });
 
   describe('registerIdentity()', () => {
     it('should create the user via the Admin API and return the externalId from the Location header', async () => {
-      fetchMock
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ access_token: 'service-account-token' }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 201,
-          headers: {
-            get: (name: string) =>
-              name === 'location'
-                ? 'http://localhost:8081/admin/realms/sisques-account/users/kc-sub-123'
-                : null,
-          },
-        });
+      httpService.post
+        .mockReturnValueOnce(
+          of(axiosResponse({ access_token: 'service-account-token' })),
+        )
+        .mockReturnValueOnce(
+          of(
+            axiosResponse(undefined, {
+              location:
+                'http://localhost:8081/admin/realms/sisques-account/users/kc-sub-123',
+            }),
+          ),
+        );
 
       const result = await adapter.registerIdentity({
         email: 'new@example.com',
@@ -55,12 +83,11 @@ describe('KeycloakIdentityProviderAdapter', () => {
       });
 
       expect(result).toEqual({ externalId: 'kc-sub-123' });
-      const createUserCall = fetchMock.mock.calls[1];
+      const createUserCall = httpService.post.mock.calls[1];
       expect(createUserCall[0]).toBe(
         'http://localhost:8081/admin/realms/sisques-account/users',
       );
-      const body = JSON.parse(createUserCall[1].body as string);
-      expect(body).toMatchObject({
+      expect(createUserCall[1]).toMatchObject({
         username: 'new@example.com',
         email: 'new@example.com',
         firstName: 'New',
@@ -70,12 +97,11 @@ describe('KeycloakIdentityProviderAdapter', () => {
     });
 
     it('should throw EmailAlreadyRegisteredException on a 409 from Keycloak', async () => {
-      fetchMock
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ access_token: 'service-account-token' }),
-        })
-        .mockResolvedValueOnce({ ok: false, status: 409 });
+      httpService.post
+        .mockReturnValueOnce(
+          of(axiosResponse({ access_token: 'service-account-token' })),
+        )
+        .mockReturnValueOnce(throwError(() => axiosError(409)));
 
       await expect(
         adapter.registerIdentity({
@@ -87,16 +113,11 @@ describe('KeycloakIdentityProviderAdapter', () => {
     });
 
     it('should throw when Keycloak returns a non-409 error', async () => {
-      fetchMock
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ access_token: 'service-account-token' }),
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          text: async () => 'internal error',
-        });
+      httpService.post
+        .mockReturnValueOnce(
+          of(axiosResponse({ access_token: 'service-account-token' })),
+        )
+        .mockReturnValueOnce(throwError(() => axiosError(500)));
 
       await expect(
         adapter.registerIdentity({
@@ -108,16 +129,11 @@ describe('KeycloakIdentityProviderAdapter', () => {
     });
 
     it('should throw when Keycloak omits the Location header', async () => {
-      fetchMock
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ access_token: 'service-account-token' }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 201,
-          headers: { get: () => null },
-        });
+      httpService.post
+        .mockReturnValueOnce(
+          of(axiosResponse({ access_token: 'service-account-token' })),
+        )
+        .mockReturnValueOnce(of(axiosResponse(undefined, {})));
 
       await expect(
         adapter.registerIdentity({
@@ -129,7 +145,7 @@ describe('KeycloakIdentityProviderAdapter', () => {
     });
 
     it('should throw when fetching the service-account token fails', async () => {
-      fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
+      httpService.post.mockReturnValueOnce(throwError(() => axiosError(500)));
 
       await expect(
         adapter.registerIdentity({
@@ -143,10 +159,9 @@ describe('KeycloakIdentityProviderAdapter', () => {
 
   describe('verifyCredentials()', () => {
     it('should return the externalId decoded from the access token', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ access_token: FAKE_KEYCLOAK_JWT }),
-      });
+      httpService.post.mockReturnValueOnce(
+        of(axiosResponse({ access_token: FAKE_KEYCLOAK_JWT })),
+      );
 
       const result = await adapter.verifyCredentials({
         email: 'user@example.com',
@@ -157,7 +172,7 @@ describe('KeycloakIdentityProviderAdapter', () => {
     });
 
     it('should throw when Keycloak rejects the credentials', async () => {
-      fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
+      httpService.post.mockReturnValueOnce(throwError(() => axiosError(401)));
 
       await expect(
         adapter.verifyCredentials({
