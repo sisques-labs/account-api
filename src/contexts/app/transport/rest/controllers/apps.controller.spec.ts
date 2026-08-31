@@ -36,6 +36,16 @@ describe('AppsController', () => {
     expect(result).toEqual('app-1');
   });
 
+  it('should dispatch a CreateAppCommand with a slug generated from the name when the slug is omitted', async () => {
+    commandBus.execute.mockResolvedValue('app-1');
+
+    await controller.create({ name: 'Gardenia' });
+
+    const dispatchedCommand = commandBus.execute.mock
+      .calls[0][0] as CreateAppCommand;
+    expect(dispatchedCommand.slug.value).toEqual('gardenia');
+  });
+
   it('should dispatch an AppFindByCriteriaQuery and map results through AppRestMapper', async () => {
     const viewModel = new AppViewModel({
       id: 'app-1',
@@ -68,9 +78,7 @@ describe('AppsController', () => {
   });
 
   it('should build criteria from URL query parameters', async () => {
-    queryBus.execute.mockResolvedValue(
-      new PaginatedResult([], 0, 2, 5),
-    );
+    queryBus.execute.mockResolvedValue(new PaginatedResult([], 0, 2, 5));
 
     await controller.findByCriteria({
       slug: 'garden',

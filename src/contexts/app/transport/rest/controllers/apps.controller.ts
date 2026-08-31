@@ -56,7 +56,7 @@ export class AppsController {
   @ApiResponse({ status: 201, description: 'App created' })
   @ApiResponse({ status: 409, description: 'Slug already taken' })
   async create(@Body() dto: CreateAppDto): Promise<string> {
-    this.logger.log(`POST /apps slug=${dto.slug}`);
+    this.logger.log(`POST /apps slug=${dto.slug ?? '(generated from name)'}`);
     return this.commandBus.execute(
       new CreateAppCommand({ slug: dto.slug, name: dto.name }),
     );
