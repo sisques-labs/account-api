@@ -2,9 +2,8 @@ import { IAppPrimitives } from '@contexts/app/domain/primitives/app.primitives';
 import { AppNameValueObject } from '@contexts/app/domain/value-objects/app-name/app-name.vo';
 import { AppSlugValueObject } from '@contexts/app/domain/value-objects/app-slug/app-slug.vo';
 
-export type CreateAppCommandInput = Pick<IAppPrimitives, 'name'> & {
-  slug?: IAppPrimitives['slug'];
-};
+export type CreateAppCommandInput = Pick<IAppPrimitives, 'name'> &
+  Partial<Pick<IAppPrimitives, 'slug'>>;
 
 export class CreateAppCommand {
   public readonly slug: AppSlugValueObject;
