@@ -1,5 +1,5 @@
-import { UserFindByEmailQuery } from '@contexts/identity/application/queries/user-find-by-email/user-find-by-email.query';
-import { UserViewModel } from '@contexts/identity/domain/view-models/user.view-model';
+import { UserFindByEmailQuery } from '@contexts/user/application/queries/user-find-by-email/user-find-by-email.query';
+import { UserViewModel } from '@contexts/user/domain/view-models/user.view-model';
 import { QueryBus } from '@nestjs/cqrs';
 
 import { UserLookupAdapter } from './user-lookup.adapter';

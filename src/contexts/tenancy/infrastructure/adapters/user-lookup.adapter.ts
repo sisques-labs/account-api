@@ -1,13 +1,13 @@
 import { IUserLookupPort } from '@contexts/tenancy/application/ports/user-lookup.port';
 import { IUserLookupResult } from '@contexts/tenancy/application/ports/user-lookup-result.interface';
-import { UserFindByEmailQuery } from '@contexts/identity/application/queries/user-find-by-email/user-find-by-email.query';
-import { UserViewModel } from '@contexts/identity/domain/view-models/user.view-model';
+import { UserFindByEmailQuery } from '@contexts/user/application/queries/user-find-by-email/user-find-by-email.query';
+import { UserViewModel } from '@contexts/user/domain/view-models/user.view-model';
 import { Injectable, Logger } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 
 /**
- * Cross-context adapter: tenancy -> identity. Dispatches via QueryBus only
- * — never imports identity's domain/application directly outside this
+ * Cross-context adapter: tenancy -> user. Dispatches via QueryBus only
+ * — never imports user's domain/application directly outside this
  * `infrastructure/adapters/` file (boundary rule).
  */
 @Injectable()

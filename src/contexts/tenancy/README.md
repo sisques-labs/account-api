@@ -25,8 +25,9 @@ The `POST /apps` endpoint exists purely as bootstrapping plumbing (not called
 out in the architecture doc's MVP endpoint list) — without it, `POST /tenants`
 would be untestable.
 
-See `src/contexts/identity/README.md` ("One context or two?") for why
-identity and tenancy are two contexts rather than one.
+See `src/contexts/user/README.md` ("One context or two?") for why the
+platform identity (`user`/`auth`) and tenancy are separate contexts rather
+than one.
 
 ---
 
@@ -70,7 +71,7 @@ POST /tenants/{tenantId}/members  ->  AddTenantMemberCommand { tenantId, email, 
                                        1. AssertTenantExistsService (404)
                                        2. IUserLookupPort.findUserIdByEmail()
                                           -> UserLookupAdapter dispatches
-                                             UserFindByEmailQuery (identity)
+                                             UserFindByEmailQuery (user)
                                           -> 404 (MemberUserNotFoundException)
                                              if no such user
                                        3. AssertTenantMembershipAvailableService
@@ -87,7 +88,7 @@ the person adding a member still shouldn't need to know internal UUIDs.
 `GET /tenants/{tenantId}/members` — 404s if the tenant doesn't exist,
 otherwise returns every `TenantMembershipViewModel` for it (`id`, `tenantId`,
 `userId`, `role`, timestamps). No email/displayName enrichment — that would
-require reaching into `identity`'s data for a read-side join, which the
+require reaching into `user`'s data for a read-side join, which the
 MVP skips (the client can correlate `userId` itself); a real join is
 reasonable follow-up work once there's a concrete UI need for it.
 
@@ -97,18 +98,18 @@ reasonable follow-up work once there's a concrete UI need for it.
 
 | Port | Adapter | Dispatches | Used by |
 |------|---------|-----------|---------|
-| `IUserLookupPort` (`findUserIdByEmail`) | `UserLookupAdapter` | `UserFindByEmailQuery` (identity, via `QueryBus`) | `AddTenantMemberCommandHandler` |
+| `IUserLookupPort` (`findUserIdByEmail`) | `UserLookupAdapter` | `UserFindByEmailQuery` (user, via `QueryBus`) | `AddTenantMemberCommandHandler` |
 | `IAppLookupPort` (`assertExists`) | `AppLookupAdapter` | `AppFindByIdQuery` (app, via `QueryBus`) | `AssertAppExistsService` → `CreateTenantCommandHandler` |
 
 `tenancy` also **exposes** `TenantMembershipFindByUserIdQuery`, consumed
-cross-context by `identity`'s `TenantMembershipLookupAdapter` (JWT claims at
-login/refresh) — see `identity`'s README.
+cross-context by `auth`'s `TenantMembershipLookupAdapter` (JWT claims at
+login/refresh) — see `auth`'s README.
 
 > Boundary rule: cross-context imports are allowed **only** from
 > `infrastructure/adapters/`. This context's controllers import
 > `JwtAuthGuard`/`@CurrentUser()` from `src/core/security/` directly — that's
-> cross-cutting infra (not `@contexts/identity`), so it isn't a boundary
-> violation.
+> cross-cutting infra (not `@contexts/user` or `@contexts/auth`), so it isn't
+> a boundary violation.
 
 ---
 
@@ -130,7 +131,7 @@ login/refresh) — see `identity`'s README.
 | `AddTenantMemberCommand` | Adds an existing user (by email) as a member |
 | `AppFindByCriteriaQuery` | Lists apps with pagination/filters — lives in `app` context |
 | `TenantMembershipFindByTenantIdQuery` | Lists a tenant's members |
-| `TenantMembershipFindByUserIdQuery` | Lists a user's memberships — consumed cross-context by `identity` |
+| `TenantMembershipFindByUserIdQuery` | Lists a user's memberships — consumed cross-context by `auth` |
 
 ### Domain events
 
@@ -147,7 +148,7 @@ pnpm test:integration                  # App/Tenant/TenantMembership repos, real
 pnpm test:e2e                          # full create-app/create-tenant/add-member flow
 ```
 
-Same layering note as `identity`: TypeORM mappers/repositories are covered
-by `test/integration/tenancy.repository.integration-spec.ts` (real Postgres,
-including the real FK to `identity`'s `user` table for memberships), not by
-isolated unit specs.
+Same layering note as `user`/`auth`: TypeORM mappers/repositories are
+covered by `test/integration/tenancy.repository.integration-spec.ts` (real
+Postgres, including the real FK to `user`'s `user` table for memberships),
+not by isolated unit specs.

@@ -12,8 +12,8 @@ import { Request } from 'express';
  * Requires a valid Sisques Account access token (`Authorization: Bearer`).
  * Cross-cutting — lives in `src/core/` (not owned by any bounded context)
  * because every context's transport layer needs it. Verifies with the same
- * `JwtService` (secret from `auth.jwtSecret`) that `identity`'s
- * `TokenService` uses to sign.
+ * `JwtService` (secret from `auth.jwtSecret`) that `auth`'s `TokenService`
+ * uses to sign.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

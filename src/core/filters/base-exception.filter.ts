@@ -1,6 +1,7 @@
 import { resolveAppExceptionStatus } from '@contexts/app/transport/exceptions/app-exception.filter';
-import { resolveIdentityExceptionStatus } from '@contexts/identity/transport/exceptions/identity-exception.filter';
+import { resolveAuthExceptionStatus } from '@contexts/auth/transport/exceptions/auth-exception.filter';
 import { resolveTenancyExceptionStatus } from '@contexts/tenancy/transport/exceptions/tenancy-exception.filter';
+import { resolveUserExceptionStatus } from '@contexts/user/transport/exceptions/user-exception.filter';
 import {
   ArgumentsHost,
   Catch,
@@ -20,7 +21,8 @@ import { GraphQLError } from 'graphql';
 const EXCEPTION_STATUS_RESOLVERS: Array<
   (exception: BaseException) => number | undefined
 > = [
-  resolveIdentityExceptionStatus,
+  resolveUserExceptionStatus,
+  resolveAuthExceptionStatus,
   resolveAppExceptionStatus,
   resolveTenancyExceptionStatus,
 ];

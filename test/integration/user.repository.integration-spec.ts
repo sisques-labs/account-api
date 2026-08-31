@@ -1,9 +1,9 @@
-import { UserBuilder } from '../../src/contexts/identity/domain/builders/user.builder';
-import { USER_READ_REPOSITORY } from '../../src/contexts/identity/domain/repositories/read/user-read.repository';
-import { IUserReadRepository } from '../../src/contexts/identity/domain/repositories/read/user-read.repository';
-import { USER_WRITE_REPOSITORY } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
-import { IUserWriteRepository } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
-import { IdentityModule } from '../../src/contexts/identity/identity.module';
+import { UserBuilder } from '../../src/contexts/user/domain/builders/user.builder';
+import { USER_READ_REPOSITORY } from '../../src/contexts/user/domain/repositories/read/user-read.repository';
+import { IUserReadRepository } from '../../src/contexts/user/domain/repositories/read/user-read.repository';
+import { USER_WRITE_REPOSITORY } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
+import { IUserWriteRepository } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
+import { UserModule } from '../../src/contexts/user/user.module';
 import { truncateAll } from '../helpers/db-reset';
 import {
   createIntegrationModule,
@@ -17,7 +17,7 @@ describe('User repository (integration)', () => {
   let userBuilder: UserBuilder;
 
   beforeAll(async () => {
-    ctx = await createIntegrationModule({ imports: [IdentityModule] });
+    ctx = await createIntegrationModule({ imports: [UserModule] });
     writeRepo = ctx.module.get(USER_WRITE_REPOSITORY);
     readRepo = ctx.module.get(USER_READ_REPOSITORY);
     userBuilder = ctx.module.get(UserBuilder);
@@ -101,18 +101,6 @@ describe('User repository (integration)', () => {
         }),
       ),
     ).rejects.toThrow();
-  });
-
-  it('should find a user by refresh token hash after issuing one', async () => {
-    const user = buildUser({ id: '550e8400-e29b-41d4-a716-446655440004' });
-    const hash = 'a'.repeat(64);
-    user.issueRefreshToken(hash, new Date(Date.now() + 1_000_000));
-    await writeRepo.save(user);
-
-    const found = await writeRepo.findByRefreshTokenHash(hash);
-
-    expect(found).not.toBeNull();
-    expect(found?.id.value).toBe(user.id.value);
   });
 
   it('should read a saved user via the read repository', async () => {

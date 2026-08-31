@@ -3,9 +3,12 @@
 Identity + tenancy service for the Sisques Labs platform (Gardenia, Nexora,
 and future apps). It owns:
 
-- **Identity** — user registration/login backed by Keycloak (self-hosted),
-  and Sisques Account's own signed JWT (access token) + opaque refresh
-  token. Apps never talk to Keycloak directly — only `account-api` does.
+- **User** — the platform identity record (`id`, `email`, `displayName`,
+  `platformAdmin`).
+- **Auth** — registration/login backed by Keycloak (self-hosted), and
+  Sisques Account's own signed JWT (access token) + opaque refresh token
+  (its own `Session` aggregate). Apps never talk to Keycloak directly —
+  only `account-api` does.
 - **Tenancy** — the platform-level mechanics of a tenant (name, members,
   roles). What each role *means* inside a given app (e.g. Gardenia's
   "member" can water but not delete plants) is that app's own concern, not
@@ -17,9 +20,10 @@ standalone, validated via tests/Postman — no `account-web` frontend yet, no
 email-based tenant invites.
 
 Built from [`sisques-labs/nestjs-template`](https://github.com/sisques-labs/nestjs-template)
-— DDD + CQRS + Hexagonal architecture. Two bounded contexts:
-`src/contexts/identity/` and `src/contexts/tenancy/` — see each context's own
-`README.md` for the one/two-context decision, aggregates, and public API.
+— DDD + CQRS + Hexagonal architecture. Three bounded contexts:
+`src/contexts/user/`, `src/contexts/auth/` and `src/contexts/tenancy/` — see
+each context's own `README.md` for the one/two/three-context decision,
+aggregates, and public API.
 
 ## Prerequisites
 
@@ -164,14 +168,15 @@ shape.
 | Area | Where |
 |------|-------|
 | Config + env validation | `src/core/config/` (Zod), incl. `auth.config.ts` (JWT + Keycloak) |
-| Auth infrastructure | `src/core/security/` — `JwtAuthGuard`, `@CurrentUser()`, shared `JwtService`. Cross-cutting (used by both contexts), not owned by `identity` |
+| Auth infrastructure | `src/core/security/` — `JwtAuthGuard`, `@CurrentUser()`, shared `JwtService`. Cross-cutting (used by every context), not owned by `auth` |
 | Health checks | `src/core/health/` — `GET /api/health/live`, `GET /api/health/ready` |
 | Logging / OTel / MCP / Kafka forwarding | Unchanged from the template — see `openspec/config.yaml` and each module's own comments |
-| Database | `src/database/migrations/` — one migration creates all 4 MVP tables |
+| Database | `src/database/migrations/` — the MVP tables (`app`, `user`, `tenant`, `tenant_membership`, `session`) |
 
 ## Architecture
 
 DDD + CQRS + Hexagonal. Full rules in `.claude/skills/architecture/SKILL.md`;
 project-wide conventions in `openspec/config.yaml`. Context-specific design
 (aggregates, cross-context ports, public API) lives in
-`src/contexts/identity/README.md` and `src/contexts/tenancy/README.md`.
+`src/contexts/user/README.md`, `src/contexts/auth/README.md` and
+`src/contexts/tenancy/README.md`.

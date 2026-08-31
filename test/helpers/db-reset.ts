@@ -9,6 +9,7 @@ export const TRUNCATE_TABLES: readonly string[] = [
   'tenant_membership',
   'tenant',
   'app',
+  'session',
   'user',
 ];
 

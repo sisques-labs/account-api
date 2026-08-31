@@ -2,10 +2,10 @@ import { AppBuilder } from '../../src/contexts/app/domain/builders/app.builder';
 import { APP_WRITE_REPOSITORY } from '../../src/contexts/app/domain/repositories/write/app-write.repository';
 import { IAppWriteRepository } from '../../src/contexts/app/domain/repositories/write/app-write.repository';
 import { AppModule } from '../../src/contexts/app/app.module';
-import { UserBuilder } from '../../src/contexts/identity/domain/builders/user.builder';
-import { USER_WRITE_REPOSITORY } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
-import { IUserWriteRepository } from '../../src/contexts/identity/domain/repositories/write/user-write.repository';
-import { IdentityModule } from '../../src/contexts/identity/identity.module';
+import { UserBuilder } from '../../src/contexts/user/domain/builders/user.builder';
+import { USER_WRITE_REPOSITORY } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
+import { IUserWriteRepository } from '../../src/contexts/user/domain/repositories/write/user-write.repository';
+import { UserModule } from '../../src/contexts/user/user.module';
 import { TenantBuilder } from '../../src/contexts/tenancy/domain/builders/tenant.builder';
 import { TenantMembershipBuilder } from '../../src/contexts/tenancy/domain/builders/tenant-membership.builder';
 import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '../../src/contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
@@ -41,7 +41,7 @@ describe('Tenancy repositories (integration)', () => {
 
   beforeAll(async () => {
     ctx = await createIntegrationModule({
-      imports: [IdentityModule, AppModule, TenancyModule],
+      imports: [UserModule, AppModule, TenancyModule],
     });
     appWriteRepo = ctx.module.get(APP_WRITE_REPOSITORY);
     tenantWriteRepo = ctx.module.get(TENANT_WRITE_REPOSITORY);
