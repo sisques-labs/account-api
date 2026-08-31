@@ -1,5 +1,3 @@
-export interface IAppEventData {
-  id: string;
-  slug: string;
-  name: string;
-}
+import { IAppPrimitives } from '@contexts/app/domain/primitives/app.primitives';
+
+export type IAppEventData = IAppPrimitives;
