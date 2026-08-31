@@ -121,10 +121,35 @@ describe('RegisterUserCommandHandler', () => {
 
     const result = await handler.execute(command);
 
-    expect(result).toEqual({
+    expect(result).toEqual({ userId: 'user-1' });
+  });
+
+  it('should pass displayName through as undefined when not provided', async () => {
+    const commandWithoutDisplayName = new RegisterUserCommand({
+      email: 'new@example.com',
+      password: 'Sup3rStrongPassw0rd!',
+    });
+    userLookupPort.findByEmail.mockResolvedValue(null);
+    identityProviderPort.registerIdentity.mockResolvedValue({
+      externalId: 'kc-sub-1',
+    });
+    userProvisioningPort.createUser.mockResolvedValue({
       userId: 'user-1',
       email: 'new@example.com',
-      displayName: 'New User',
+      displayName: null,
+    });
+
+    await handler.execute(commandWithoutDisplayName);
+
+    expect(identityProviderPort.registerIdentity).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'Sup3rStrongPassw0rd!',
+      displayName: undefined,
+    });
+    expect(userProvisioningPort.createUser).toHaveBeenCalledWith({
+      externalId: 'kc-sub-1',
+      email: 'new@example.com',
+      displayName: undefined,
     });
   });
 });

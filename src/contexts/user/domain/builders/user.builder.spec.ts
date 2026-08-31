@@ -49,16 +49,16 @@ describe('UserBuilder', () => {
       ).toThrow(FieldIsRequiredException);
     });
 
-    it('should throw when displayName is missing', () => {
-      expect(() =>
-        builder
-          .withId('550e8400-e29b-41d4-a716-446655440000')
-          .withExternalId('kc-sub-1')
-          .withEmail('user@example.com')
-          .withCreatedAt(NOW)
-          .withUpdatedAt(NOW)
-          .build(),
-      ).toThrow(FieldIsRequiredException);
+    it('should build with displayName undefined when not provided', () => {
+      const user = builder
+        .withId('550e8400-e29b-41d4-a716-446655440000')
+        .withExternalId('kc-sub-1')
+        .withEmail('user@example.com')
+        .withCreatedAt(NOW)
+        .withUpdatedAt(NOW)
+        .build();
+
+      expect(user.displayName).toBeUndefined();
     });
   });
 
@@ -96,14 +96,16 @@ describe('UserBuilder', () => {
       ).toThrow(FieldIsRequiredException);
     });
 
-    it('should throw when displayName is missing', () => {
-      expect(() =>
-        builder
-          .withId('550e8400-e29b-41d4-a716-446655440000')
-          .withExternalId('kc-sub-1')
-          .withEmail('user@example.com')
-          .buildViewModel(),
-      ).toThrow(FieldIsRequiredException);
+    it('should build with displayName null when not provided', () => {
+      const viewModel = builder
+        .withId('550e8400-e29b-41d4-a716-446655440000')
+        .withExternalId('kc-sub-1')
+        .withEmail('user@example.com')
+        .withCreatedAt(NOW)
+        .withUpdatedAt(NOW)
+        .buildViewModel();
+
+      expect(viewModel.displayName).toBeNull();
     });
   });
 });

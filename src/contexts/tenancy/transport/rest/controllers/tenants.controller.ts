@@ -1,5 +1,5 @@
 import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.command';
-import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member-result.interface';
+import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.handler';
 import { CreateTenantCommand } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.command';
 import { ICreateTenantResult } from '@contexts/tenancy/application/commands/create-tenant/create-tenant-result.interface';
 import { DeleteTenantCommand } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.command';

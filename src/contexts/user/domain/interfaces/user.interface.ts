@@ -6,6 +6,6 @@ import { BooleanValueObject, IBaseAggregate } from '@sisques-labs/nestjs-kit';
 export interface IUser extends IBaseAggregate {
   externalId: ExternalIdValueObject;
   email: UserEmailValueObject;
-  displayName: DisplayNameValueObject;
+  displayName?: DisplayNameValueObject;
   platformAdmin: BooleanValueObject;
 }

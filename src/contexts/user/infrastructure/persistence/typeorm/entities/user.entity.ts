@@ -20,8 +20,8 @@ export class UserEntity {
   @Column({ type: 'varchar' })
   email!: string;
 
-  @Column({ name: 'display_name', type: 'varchar' })
-  displayName!: string;
+  @Column({ name: 'display_name', type: 'varchar', nullable: true })
+  displayName!: string | null;
 
   @Column({ name: 'platform_admin', type: 'boolean', default: false })
   platformAdmin!: boolean;

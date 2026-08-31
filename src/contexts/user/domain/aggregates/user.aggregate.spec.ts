@@ -28,12 +28,25 @@ describe('UserAggregate', () => {
       expect(user.id.value).toBe(USER_ID);
       expect(user.externalId.value).toBe(EXTERNAL_ID);
       expect(user.email.value).toBe(EMAIL);
-      expect(user.displayName.value).toBe(DISPLAY_NAME);
+      expect(user.displayName?.value).toBe(DISPLAY_NAME);
       expect(user.platformAdmin.value).toBe(false);
     });
 
     it('should have no uncommitted events after construction', () => {
       expect(buildUser().getUncommittedEvents()).toHaveLength(0);
+    });
+
+    it('should leave displayName undefined when not provided', () => {
+      const user = new UserBuilder()
+        .withId(USER_ID)
+        .withExternalId(EXTERNAL_ID)
+        .withEmail(EMAIL)
+        .withCreatedAt(CREATED_AT)
+        .withUpdatedAt(UPDATED_AT)
+        .build();
+
+      expect(user.displayName).toBeUndefined();
+      expect(user.toPrimitives().displayName).toBeNull();
     });
   });
 

@@ -5,7 +5,7 @@ import { UserEmailValueObject } from '@contexts/user/domain/value-objects/user-e
 export interface CreateUserCommandInput {
   externalId: string;
   email: string;
-  displayName: string;
+  displayName?: string;
 }
 
 /**
@@ -17,11 +17,14 @@ export interface CreateUserCommandInput {
 export class CreateUserCommand {
   public readonly externalId: ExternalIdValueObject;
   public readonly email: UserEmailValueObject;
-  public readonly displayName: DisplayNameValueObject;
+  public readonly displayName?: DisplayNameValueObject;
 
   constructor(input: CreateUserCommandInput) {
     this.externalId = new ExternalIdValueObject(input.externalId);
     this.email = new UserEmailValueObject(input.email);
-    this.displayName = new DisplayNameValueObject(input.displayName);
+    this.displayName =
+      input.displayName !== undefined
+        ? new DisplayNameValueObject(input.displayName)
+        : undefined;
   }
 }

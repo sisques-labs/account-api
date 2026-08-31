@@ -17,8 +17,6 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
 export interface RegisterUserResult {
   userId: string;
-  email: string;
-  displayName: string;
 }
 
 @CommandHandler(RegisterUserCommand)
@@ -45,17 +43,17 @@ export class RegisterUserCommandHandler implements ICommandHandler<RegisterUserC
     const { externalId } = await this.identityProviderPort.registerIdentity({
       email: email.value,
       password: password.value,
-      displayName: displayName.value,
+      displayName: displayName?.value,
     });
 
     const user = await this.userProvisioningPort.createUser({
       externalId,
       email: email.value,
-      displayName: displayName.value,
+      displayName: displayName?.value,
     });
 
     this.logger.log(`User registered: ${user.userId}`);
 
-    return user;
+    return { userId: user.userId };
   }
 }

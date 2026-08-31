@@ -13,7 +13,7 @@ import { BaseCommandHandler, UuidValueObject } from '@sisques-labs/nestjs-kit';
 export interface CreateUserResult {
   userId: string;
   email: string;
-  displayName: string;
+  displayName: string | null;
 }
 
 @CommandHandler(CreateUserCommand)
@@ -47,7 +47,7 @@ export class CreateUserCommandHandler
       .withId(UuidValueObject.generate().value)
       .withExternalId(externalId.value)
       .withEmail(email.value)
-      .withDisplayName(displayName.value)
+      .withDisplayName(displayName?.value)
       .withPlatformAdmin(false)
       .withCreatedAt(now)
       .withUpdatedAt(now)
@@ -62,7 +62,7 @@ export class CreateUserCommandHandler
     return {
       userId: user.id.value,
       email: user.email.value,
-      displayName: user.displayName.value,
+      displayName: user.displayName?.value ?? null,
     };
   }
 }

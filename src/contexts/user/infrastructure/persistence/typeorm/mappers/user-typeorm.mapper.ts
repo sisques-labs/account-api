@@ -13,7 +13,7 @@ export class UserTypeOrmMapper {
       .withId(entity.id)
       .withExternalId(entity.externalId)
       .withEmail(entity.email)
-      .withDisplayName(entity.displayName)
+      .withDisplayName(entity.displayName ?? undefined)
       .withPlatformAdmin(entity.platformAdmin)
       .withCreatedAt(entity.createdAt)
       .withUpdatedAt(entity.updatedAt)

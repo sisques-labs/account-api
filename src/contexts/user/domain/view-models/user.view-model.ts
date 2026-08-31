@@ -4,7 +4,7 @@ import { BaseViewModel } from '@sisques-labs/nestjs-kit';
 export class UserViewModel extends BaseViewModel {
   public readonly externalId: string;
   public readonly email: string;
-  public readonly displayName: string;
+  public readonly displayName: string | null;
   public readonly platformAdmin: boolean;
 
   constructor(

@@ -38,7 +38,7 @@ export class CreateIdentityAndTenancy1788165600000 implements MigrationInterface
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "external_id" varchar(255) NOT NULL,
         "email" varchar(320) NOT NULL,
-        "display_name" varchar(120) NOT NULL,
+        "display_name" varchar(120),
         "platform_admin" boolean NOT NULL DEFAULT false,
         "refresh_token_hash" varchar(255),
         "refresh_token_expires_at" TIMESTAMP,

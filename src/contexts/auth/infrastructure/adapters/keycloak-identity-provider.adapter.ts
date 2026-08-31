@@ -29,7 +29,8 @@ export class KeycloakIdentityProviderAdapter implements IIdentityProviderPort {
     this.logger.log(`Registering identity in Keycloak: ${input.email}`);
 
     const token = await this.getServiceAccountToken();
-    const [firstName, ...rest] = input.displayName.trim().split(/\s+/);
+    const nameSource = input.displayName?.trim() || input.email.split('@')[0];
+    const [firstName, ...rest] = nameSource.split(/\s+/);
     const lastName = rest.length > 0 ? rest.join(' ') : firstName;
 
     const response = await fetch(

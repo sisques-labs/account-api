@@ -1,5 +1,4 @@
 import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.command';
-import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member-result.interface';
 import {
   IUserLookupPort,
   USER_LOOKUP_PORT,
@@ -16,6 +15,13 @@ import {
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { BaseCommandHandler, UuidValueObject } from '@sisques-labs/nestjs-kit';
+
+export interface IAddTenantMemberResult {
+  membershipId: string;
+  tenantId: string;
+  userId: string;
+  role: string;
+}
 
 @CommandHandler(AddTenantMemberCommand)
 export class AddTenantMemberCommandHandler

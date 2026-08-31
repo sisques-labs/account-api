@@ -10,7 +10,7 @@ import { BaseAggregate, BooleanValueObject } from '@sisques-labs/nestjs-kit';
 export class UserAggregate extends BaseAggregate {
   private readonly _externalId: ExternalIdValueObject;
   private readonly _email: UserEmailValueObject;
-  private readonly _displayName: DisplayNameValueObject;
+  private readonly _displayName: DisplayNameValueObject | undefined;
   private readonly _platformAdmin: BooleanValueObject;
 
   constructor(props: IUser) {
@@ -29,7 +29,7 @@ export class UserAggregate extends BaseAggregate {
           id: this._id.value,
           externalId: this._externalId.value,
           email: this._email.value,
-          displayName: this._displayName.value,
+          displayName: this._displayName?.value ?? null,
         },
       ),
     );
@@ -47,7 +47,7 @@ export class UserAggregate extends BaseAggregate {
     return this._email;
   }
 
-  get displayName(): DisplayNameValueObject {
+  get displayName(): DisplayNameValueObject | undefined {
     return this._displayName;
   }
 
@@ -60,7 +60,7 @@ export class UserAggregate extends BaseAggregate {
       id: this._id.value,
       externalId: this._externalId.value,
       email: this._email.value,
-      displayName: this._displayName.value,
+      displayName: this._displayName?.value ?? null,
       platformAdmin: this._platformAdmin.value,
       createdAt: this.createdAt.value,
       updatedAt: this.updatedAt.value,
