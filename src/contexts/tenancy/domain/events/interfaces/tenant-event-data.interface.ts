@@ -1,6 +1,3 @@
-export interface ITenantEventData {
-  id: string;
-  appId: string;
-  name: string;
-  slug: string;
-}
+import { ITenantPrimitives } from '@contexts/tenancy/domain/primitives/tenant.primitives';
+
+export type ITenantEventData = ITenantPrimitives;

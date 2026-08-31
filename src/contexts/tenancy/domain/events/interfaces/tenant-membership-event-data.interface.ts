@@ -1,6 +1,3 @@
-export interface ITenantMembershipEventData {
-  id: string;
-  tenantId: string;
-  userId: string;
-  role: string;
-}
+import { ITenantMembershipPrimitives } from '@contexts/tenancy/domain/primitives/tenant-membership.primitives';
+
+export type ITenantMembershipEventData = ITenantMembershipPrimitives;

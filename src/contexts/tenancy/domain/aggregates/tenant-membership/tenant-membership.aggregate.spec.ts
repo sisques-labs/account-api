@@ -37,7 +37,7 @@ describe('TenantMembershipAggregate', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(TenantMembershipCreatedEvent);
-    expect((events[0] as TenantMembershipCreatedEvent).data).toEqual({
+    expect((events[0] as TenantMembershipCreatedEvent).data).toMatchObject({
       id: MEMBERSHIP_ID,
       tenantId: TENANT_ID,
       userId: USER_ID,

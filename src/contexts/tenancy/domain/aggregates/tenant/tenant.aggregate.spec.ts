@@ -35,7 +35,7 @@ describe('TenantAggregate', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(TenantCreatedEvent);
-    expect((events[0] as TenantCreatedEvent).data).toEqual({
+    expect((events[0] as TenantCreatedEvent).data).toMatchObject({
       id: TENANT_ID,
       appId: APP_ID,
       name: 'My Garden',
