@@ -5,7 +5,7 @@ import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 
 /**
  * Cross-cutting JWT infrastructure: the one `JwtService` every bounded
- * context shares — `auth`'s `TokenService` signs with it, `JwtAuthGuard`
+ * context shares — `auth`'s `TokenSignService` signs with it, `JwtAuthGuard`
  * (exported here) verifies with it. `@Global()` so it's imported once (in
  * `CoreModule`) and available everywhere without per-context re-registration
  * (which would risk drifting configs).

@@ -7,9 +7,7 @@ export class UserViewModel extends BaseViewModel {
   public readonly displayName: string | null;
   public readonly platformAdmin: boolean;
 
-  constructor(
-    props: Omit<IUserPrimitives, 'refreshTokenHash' | 'refreshTokenExpiresAt'>,
-  ) {
+  constructor(props: IUserPrimitives) {
     super(props.id, props.createdAt, props.updatedAt);
     this.externalId = props.externalId;
     this.email = props.email;

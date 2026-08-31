@@ -36,9 +36,7 @@ describe('AppFindByCriteriaQueryHandler', () => {
     readRepository.findByCriteria.mockRejectedValue(new Error('DB error'));
 
     await expect(
-      handler.execute(
-        new AppFindByCriteriaQuery({ criteria: {} as Criteria }),
-      ),
+      handler.execute(new AppFindByCriteriaQuery({ criteria: {} as Criteria })),
     ).rejects.toThrow('DB error');
   });
 });

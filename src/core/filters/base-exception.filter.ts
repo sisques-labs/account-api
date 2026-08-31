@@ -1,3 +1,9 @@
+// Deliberate, documented exception to "core never depends on contexts": this
+// is the one extension point where the global filter needs every bounded
+// context's exception→HTTP-status mapping. Each context exports its own
+// `transport/exceptions/{name}-exception.filter.ts` resolver, and this file
+// is the single place that aggregates them — contexts still never import
+// each other or import core's domain logic, only this filter reaches out.
 import { resolveAppExceptionStatus } from '@contexts/app/transport/exceptions/app-exception.filter';
 import { resolveAuthExceptionStatus } from '@contexts/auth/transport/exceptions/auth-exception.filter';
 import { resolveTenancyExceptionStatus } from '@contexts/tenancy/transport/exceptions/tenancy-exception.filter';

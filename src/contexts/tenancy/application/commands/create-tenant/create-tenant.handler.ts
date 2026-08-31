@@ -1,5 +1,4 @@
 import { CreateTenantCommand } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.command';
-import { ICreateTenantResult } from '@contexts/tenancy/application/commands/create-tenant/create-tenant-result.interface';
 import { AssertAppExistsService } from '@contexts/tenancy/application/services/write/assert-app-exists/assert-app-exists.service';
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
 import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
@@ -14,11 +13,19 @@ import {
   TENANT_MEMBERSHIP_WRITE_REPOSITORY,
 } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
 import { Inject, Logger } from '@nestjs/common';
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { UuidValueObject } from '@sisques-labs/nestjs-kit';
+import {
+  AggregateRoot,
+  CommandHandler,
+  EventBus,
+  ICommandHandler,
+} from '@nestjs/cqrs';
+import { BaseCommandHandler, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 @CommandHandler(CreateTenantCommand)
-export class CreateTenantCommandHandler implements ICommandHandler<CreateTenantCommand> {
+export class CreateTenantCommandHandler
+  extends BaseCommandHandler<CreateTenantCommand, AggregateRoot>
+  implements ICommandHandler<CreateTenantCommand, string>
+{
   private readonly logger = new Logger(CreateTenantCommandHandler.name);
 
   constructor(
@@ -30,10 +37,12 @@ export class CreateTenantCommandHandler implements ICommandHandler<CreateTenantC
     private readonly assertTenantSlugAvailableService: AssertTenantSlugAvailableService,
     private readonly tenantBuilder: TenantBuilder,
     private readonly tenantMembershipBuilder: TenantMembershipBuilder,
-    private readonly eventBus: EventBus,
-  ) {}
+    eventBus: EventBus,
+  ) {
+    super(eventBus);
+  }
 
-  async execute(command: CreateTenantCommand): Promise<ICreateTenantResult> {
+  async execute(command: CreateTenantCommand): Promise<string> {
     const { appId, name, slug, creatorUserId } = command;
 
     await this.assertAppExistsService.execute(appId);
@@ -51,8 +60,7 @@ export class CreateTenantCommandHandler implements ICommandHandler<CreateTenantC
 
     tenant.create();
     await this.tenantWriteRepository.save(tenant);
-    await this.eventBus.publishAll(tenant.getUncommittedEvents());
-    await tenant.commit();
+    await this.publishEvents(tenant);
 
     const membershipNow = new Date();
     const membership = this.tenantMembershipBuilder
@@ -66,18 +74,12 @@ export class CreateTenantCommandHandler implements ICommandHandler<CreateTenantC
 
     membership.create();
     await this.tenantMembershipWriteRepository.save(membership);
-    await this.eventBus.publishAll(membership.getUncommittedEvents());
-    await membership.commit();
+    await this.publishEvents(membership);
 
     this.logger.log(
       `Tenant created: ${tenant.id.value} (owner: ${creatorUserId.value})`,
     );
 
-    return {
-      tenantId: tenant.id.value,
-      appId: tenant.appId.value,
-      name: tenant.name.value,
-      slug: tenant.slug.value,
-    };
+    return tenant.id.value;
   }
 }

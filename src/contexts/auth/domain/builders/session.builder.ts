@@ -54,6 +54,10 @@ export class SessionBuilder extends BaseBuilder<
     });
   }
 
+  // No session-read.repository/query exists yet — nothing consumes this.
+  // Implemented ahead of a read side landing (unlike TenantBuilder's
+  // documented never-implement stance) so the eventual query only needs
+  // to wire the repository, not touch the builder.
   public override buildViewModel(): SessionViewModel {
     this.validate();
 

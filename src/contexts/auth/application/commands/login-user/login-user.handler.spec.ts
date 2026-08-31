@@ -109,7 +109,7 @@ describe('LoginUserCommandHandler', () => {
       { tenantId: 'tenant-1', role: 'owner' },
     ]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
-    generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
+    generateRefreshTokenService.execute.mockResolvedValue('raw-refresh-token');
     hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
 
     const result = await handler.execute(command);
@@ -133,7 +133,7 @@ describe('LoginUserCommandHandler', () => {
     sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
-    generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
+    generateRefreshTokenService.execute.mockResolvedValue('raw-refresh-token');
     hashRefreshTokenService.execute.mockResolvedValue('b'.repeat(64));
 
     await handler.execute(command);
@@ -161,7 +161,7 @@ describe('LoginUserCommandHandler', () => {
     sessionWriteRepository.save.mockResolvedValue(existingSession);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
-    generateRefreshTokenService.execute.mockReturnValue('raw-refresh-token');
+    generateRefreshTokenService.execute.mockResolvedValue('raw-refresh-token');
     hashRefreshTokenService.execute.mockResolvedValue('c'.repeat(64));
 
     await handler.execute(command);

@@ -63,7 +63,12 @@ ESLint rule). See `auth`'s README for the `auth` ⇄ `user` ports in detail.
 | `displayName` | `DisplayNameValueObject` | |
 | `platformAdmin` | `BooleanValueObject` | Default `false`; no MVP endpoint reads/writes it yet |
 
-Methods: `create()` (emits `UserRegisteredEvent`).
+Methods: `create()` (emits `UserRegisteredEvent`); `update()`, `delete()`,
+and private `changeEmail()` / `changeDisplayName()` / `changePlatformAdmin()`
+(each a no-op if the value is unchanged, otherwise emits the matching
+`*Changed` event plus `UserUpdatedEvent`/`UserDeletedEvent`) — prepared for
+future use, not yet exposed via a command (no `UpdateUserCommand`/
+`DeleteUserCommand` exists today).
 
 ---
 
@@ -115,7 +120,17 @@ point that touches a user today (registration/login/refresh).
 
 ### Domain events
 
-`UserRegisteredEvent` — emitted by `user.create()`.
+| Event | Emitted by |
+|-------|-----------|
+| `UserRegisteredEvent` | `user.create()` |
+| `UserUpdatedEvent` | `user.update()` |
+| `UserDeletedEvent` | `user.delete()` |
+| `UserEmailChangedEvent` | `user.update()` when `email` changes |
+| `UserDisplayNameChangedEvent` | `user.update()` when `displayName` changes |
+| `UserPlatformAdminChangedEvent` | `user.update()` when `platformAdmin` changes |
+
+`update()`/`delete()` and their events are prepared for future use — no
+command dispatches them yet (see "Core aggregate" above).
 
 ---
 

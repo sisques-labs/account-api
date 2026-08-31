@@ -25,11 +25,7 @@ describe('AuthController', () => {
 
   describe('register()', () => {
     it('should dispatch a RegisterUserCommand with the DTO fields', async () => {
-      commandBus.execute.mockResolvedValue({
-        userId: 'user-1',
-        email: 'new@example.com',
-        displayName: 'New User',
-      });
+      commandBus.execute.mockResolvedValue('user-1');
 
       const result = await controller.register({
         email: 'new@example.com',

@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
  * The ONE identity-provider adapter for the MVP (Keycloak, self-hosted).
  * Implements IIdentityProviderPort so a future adapter (e.g. Cognito) can be
  * swapped in without touching the domain/application layers — see the
- * `identity` context README and the architecture doc's "Proveedor de
+ * `auth` context README and the architecture doc's "Proveedor de
  * identidad" section. Talks to Keycloak over plain HTTP (Admin REST API for
  * user creation, the token endpoint for credential verification) — Sisques
  * Account is the ONLY caller of Keycloak; apps never talk to it directly.

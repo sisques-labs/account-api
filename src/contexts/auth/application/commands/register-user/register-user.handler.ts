@@ -15,12 +15,11 @@ import { EmailAlreadyRegisteredException } from '@contexts/auth/domain/exception
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 
-export interface RegisterUserResult {
-  userId: string;
-}
-
 @CommandHandler(RegisterUserCommand)
-export class RegisterUserCommandHandler implements ICommandHandler<RegisterUserCommand> {
+export class RegisterUserCommandHandler implements ICommandHandler<
+  RegisterUserCommand,
+  string
+> {
   private readonly logger = new Logger(RegisterUserCommandHandler.name);
 
   constructor(
@@ -32,7 +31,7 @@ export class RegisterUserCommandHandler implements ICommandHandler<RegisterUserC
     private readonly userProvisioningPort: IUserProvisioningPort,
   ) {}
 
-  async execute(command: RegisterUserCommand): Promise<RegisterUserResult> {
+  async execute(command: RegisterUserCommand): Promise<string> {
     const { email, password, displayName } = command;
 
     // Pre-check before calling Keycloak — avoids orphaning an external
@@ -54,6 +53,6 @@ export class RegisterUserCommandHandler implements ICommandHandler<RegisterUserC
 
     this.logger.log(`User registered: ${user.userId}`);
 
-    return { userId: user.userId };
+    return user.userId;
   }
 }

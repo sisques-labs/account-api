@@ -7,7 +7,7 @@ import {
   IUserLookupPort,
   USER_LOOKUP_PORT,
 } from '@contexts/auth/application/ports/user-lookup.port';
-import { ILoginSessionResult } from '@contexts/auth/application/commands/login-user/login-user.handler';
+import { ILoginSessionResult } from '@contexts/auth/application/commands/login-session-result.interface';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
 import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
@@ -68,7 +68,7 @@ export class RefreshSessionCommandHandler implements ICommandHandler<RefreshSess
       tenants,
     });
 
-    const rawRefreshToken = this.generateRefreshTokenService.execute();
+    const rawRefreshToken = await this.generateRefreshTokenService.execute();
     const refreshTokenHash =
       await this.hashRefreshTokenService.execute(rawRefreshToken);
     const refreshTokenTtlDays = this.configService.get<number>(

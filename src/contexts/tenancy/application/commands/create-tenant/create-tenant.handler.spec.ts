@@ -102,13 +102,8 @@ describe('CreateTenantCommandHandler', () => {
       tenantMembershipWriteRepository.save.mock.calls[0][0];
     expect(savedMembership.userId.value).toBe(USER_ID);
     expect(savedMembership.role.value).toBe('OWNER');
-    expect(savedMembership.tenantId.value).toBe(result.tenantId);
-    expect(result).toEqual({
-      tenantId: expect.any(String),
-      appId: APP_ID,
-      name: 'My Garden',
-      slug: 'my-garden',
-    });
+    expect(savedMembership.tenantId.value).toBe(result);
+    expect(result).toEqual(expect.any(String));
   });
 
   it('should publish events for both the tenant and the membership', async () => {

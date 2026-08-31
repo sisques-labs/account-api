@@ -8,8 +8,12 @@ import {
   BaseDatabaseRepository,
   Criteria,
   PaginatedResult,
+  SortDirection,
 } from '@sisques-labs/nestjs-kit';
+import { applyCriteriaToQueryBuilder } from '@sisques-labs/nestjs-kit/typeorm';
 import { Repository } from 'typeorm';
+
+const ALIAS = 'tenant_membership';
 
 @Injectable()
 export class TenantMembershipTypeOrmReadRepository
@@ -46,11 +50,14 @@ export class TenantMembershipTypeOrmReadRepository
   ): Promise<PaginatedResult<TenantMembershipViewModel>> {
     const { page, limit, skip } = await this.calculatePagination(criteria);
 
-    const [entities, total] = await this.repo.findAndCount({
-      skip,
-      take: limit,
-      order: this.buildTypeOrmOrder(criteria),
+    const qb = this.repo.createQueryBuilder(ALIAS);
+
+    applyCriteriaToQueryBuilder(qb, criteria, {
+      alias: ALIAS,
+      defaultSort: { field: 'createdAt', direction: SortDirection.DESC },
     });
+
+    const [entities, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
     return new PaginatedResult(
       entities.map((entity) => this.mapper.toViewModel(entity)),

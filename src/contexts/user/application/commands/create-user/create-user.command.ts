@@ -1,12 +1,17 @@
+import { IUserPrimitives } from '@contexts/user/domain/primitives/user.primitives';
 import { DisplayNameValueObject } from '@contexts/user/domain/value-objects/display-name/display-name.vo';
 import { ExternalIdValueObject } from '@contexts/user/domain/value-objects/external-id/external-id.vo';
 import { UserEmailValueObject } from '@contexts/user/domain/value-objects/user-email/user-email.vo';
 
-export interface CreateUserCommandInput {
-  externalId: string;
-  email: string;
+// displayName is optional-and-absent-means-unset here (undefined), unlike
+// IUserPrimitives.displayName (string | null) — creation has no "explicitly
+// cleared" state, so it's overridden rather than Pick'd as-is.
+export type CreateUserCommandInput = Pick<
+  IUserPrimitives,
+  'externalId' | 'email'
+> & {
   displayName?: string;
-}
+};
 
 /**
  * Creates the local platform `user` row. Dispatched cross-context by

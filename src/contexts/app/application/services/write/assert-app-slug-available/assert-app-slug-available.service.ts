@@ -8,7 +8,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IBaseService } from '@sisques-labs/nestjs-kit';
 
 @Injectable()
-export class AssertAppSlugAvailableService implements IBaseService {
+export class AssertAppSlugAvailableService implements IBaseService<
+  AppSlugValueObject,
+  void
+> {
   constructor(
     @Inject(APP_WRITE_REPOSITORY)
     private readonly appWriteRepository: IAppWriteRepository,

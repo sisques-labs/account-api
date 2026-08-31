@@ -162,7 +162,8 @@ login/refresh) — see `auth`'s README.
 ### Domain events
 
 `TenantCreatedEvent`, `TenantUpdatedEvent` (+ `TenantNameChangedEvent`/`TenantSlugChangedEvent`),
-`TenantDeletedEvent`, `TenantMembershipCreatedEvent`.
+`TenantDeletedEvent`, `TenantMembershipCreatedEvent`, `TenantMembershipUpdatedEvent`
+(+ `TenantMembershipRoleChangedEvent`), `TenantMembershipDeletedEvent`.
 
 ---
 

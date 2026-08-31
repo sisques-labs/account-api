@@ -8,7 +8,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IBaseService, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 @Injectable()
-export class AssertTenantExistsService implements IBaseService {
+export class AssertTenantExistsService implements IBaseService<
+  UuidValueObject,
+  TenantAggregate
+> {
   constructor(
     @Inject(TENANT_WRITE_REPOSITORY)
     private readonly tenantWriteRepository: ITenantWriteRepository,

@@ -1,4 +1,5 @@
 import { LoginUserCommand } from '@contexts/auth/application/commands/login-user/login-user.command';
+import { ILoginSessionResult } from '@contexts/auth/application/commands/login-session-result.interface';
 import {
   IDENTITY_PROVIDER_PORT,
   IIdentityProviderPort,
@@ -24,11 +25,6 @@ import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { ConfigService } from '@nestjs/config';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';
-
-export interface ILoginSessionResult {
-  accessToken: string;
-  refreshToken: string;
-}
 
 @CommandHandler(LoginUserCommand)
 export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand> {
@@ -76,7 +72,7 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
       tenants,
     });
 
-    const rawRefreshToken = this.generateRefreshTokenService.execute();
+    const rawRefreshToken = await this.generateRefreshTokenService.execute();
     const refreshTokenHash =
       await this.hashRefreshTokenService.execute(rawRefreshToken);
     const refreshTokenTtlDays = this.configService.get<number>(

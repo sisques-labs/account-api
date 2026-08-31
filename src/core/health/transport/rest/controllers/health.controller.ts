@@ -14,7 +14,7 @@ import {
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 
-import { HealthResponseDto } from '../dtos/health-response.dto';
+import { HealthResponseDto } from '@core/health/transport/rest/dtos/health-response.dto';
 
 @ApiTags('health')
 @Controller({ path: 'health', version: VERSION_NEUTRAL })

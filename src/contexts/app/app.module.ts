@@ -18,10 +18,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 const COMMAND_HANDLERS = [CreateAppCommandHandler];
 
-const QUERY_HANDLERS = [
-  AppFindByCriteriaQueryHandler,
-  AppFindByIdQueryHandler,
-];
+const QUERY_HANDLERS = [AppFindByCriteriaQueryHandler, AppFindByIdQueryHandler];
 
 const APPLICATION_SERVICES = [
   AssertAppSlugAvailableService,

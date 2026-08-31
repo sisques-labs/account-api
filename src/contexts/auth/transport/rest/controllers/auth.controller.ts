@@ -1,11 +1,11 @@
+import { ILoginSessionResult } from '@contexts/auth/application/commands/login-session-result.interface';
 import { LoginUserCommand } from '@contexts/auth/application/commands/login-user/login-user.command';
-import { ILoginSessionResult } from '@contexts/auth/application/commands/login-user/login-user.handler';
 import { RefreshSessionCommand } from '@contexts/auth/application/commands/refresh-session/refresh-session.command';
 import {
   RegisterUserCommand,
   RegisterUserCommandInput,
 } from '@contexts/auth/application/commands/register-user/register-user.command';
-import { RegisterUserResult } from '@contexts/auth/application/commands/register-user/register-user.handler';
+import { RegisterUserResult } from '@contexts/auth/application/commands/register-user/register-user-result.interface';
 import { LoginUserDto } from '@contexts/auth/transport/rest/dtos/login-user.dto';
 import { RefreshTokenDto } from '@contexts/auth/transport/rest/dtos/refresh-token.dto';
 import { RegisterUserDto } from '@contexts/auth/transport/rest/dtos/register-user.dto';
@@ -46,7 +46,10 @@ export class AuthController {
       password: dto.password,
       displayName: dto.displayName,
     };
-    return this.commandBus.execute(new RegisterUserCommand(input));
+    const userId = await this.commandBus.execute<RegisterUserCommand, string>(
+      new RegisterUserCommand(input),
+    );
+    return { userId };
   }
 
   @Post('login')

@@ -102,7 +102,7 @@ describe('RegisterUserCommandHandler', () => {
     });
   });
 
-  it('should return the provisioning result', async () => {
+  it('should return the new user id', async () => {
     userLookupPort.findByEmail.mockResolvedValue(null);
     identityProviderPort.registerIdentity.mockResolvedValue({
       externalId: 'kc-sub-1',
@@ -113,7 +113,7 @@ describe('RegisterUserCommandHandler', () => {
 
     const result = await handler.execute(command);
 
-    expect(result).toEqual({ userId: 'user-1' });
+    expect(result).toBe('user-1');
   });
 
   it('should pass displayName through as undefined when not provided', async () => {

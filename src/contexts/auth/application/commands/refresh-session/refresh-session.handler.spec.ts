@@ -111,7 +111,7 @@ describe('RefreshSessionCommandHandler', () => {
     userLookupPort.findById.mockResolvedValue(USER_LOOKUP_RESULT);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('new-access-token');
-    generateRefreshTokenService.execute.mockReturnValue('new-raw-token');
+    generateRefreshTokenService.execute.mockResolvedValue('new-raw-token');
 
     const result = await handler.execute(command);
 
