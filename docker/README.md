@@ -26,7 +26,7 @@ The container needs a reachable PostgreSQL instance — it does not bundle one.
 
 | Port | Purpose |
 |------|---------|
-| `3000` | HTTP — REST (`/api/*`), GraphQL (`/graphql`), Swagger docs, health, metrics, MCP (see routes below) |
+| `3000` | HTTP — REST (`/api/v1/*`), GraphQL (`/graphql`), Swagger docs, health, metrics, MCP (see routes below) |
 
 ## Routes
 
@@ -34,7 +34,7 @@ The container needs a reachable PostgreSQL instance — it does not bundle one.
 |------|---------|
 | `GET /api/health/live` | Liveness probe |
 | `GET /api/health/ready` | Readiness probe (checks DB connectivity) |
-| `POST /api/mcp` | MCP (Model Context Protocol) endpoint |
+| `POST /api/v1/mcp` | MCP (Model Context Protocol) endpoint |
 | `POST /graphql` | GraphQL (Apollo) |
 | `GET /docs` | Swagger UI |
 

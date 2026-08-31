@@ -111,7 +111,7 @@ Register → login → create an app → create a tenant (creator becomes owner)
 → add an existing user as a member → list members → refresh.
 
 ```bash
-BASE=http://localhost:3000/api
+BASE=http://localhost:3000/api/v1
 
 # 1. Register the tenant creator
 curl -s -X POST $BASE/auth/register -H 'Content-Type: application/json' -d '{

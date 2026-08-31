@@ -114,13 +114,13 @@ login/refresh) — see `identity`'s README.
 
 ## Public API
 
-### REST
+### REST (`/api/v1/tenants/*`)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/tenants` | JWT | Create a tenant; caller becomes owner. 201, 404 (app), or 409 (slug). |
-| `POST` | `/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
-| `GET` | `/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
+| `POST` | `/api/v1/tenants` | JWT | Create a tenant; caller becomes owner. 201, 404 (app), or 409 (slug). |
+| `POST` | `/api/v1/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
+| `GET` | `/api/v1/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
 
 ### Commands & queries
 

@@ -36,7 +36,7 @@ import {
 @ApiTags('tenants')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('tenants')
+@Controller({ path: 'tenants', version: '1' })
 export class TenantsController {
   private readonly logger = new Logger(TenantsController.name);
 

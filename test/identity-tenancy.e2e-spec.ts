@@ -29,7 +29,7 @@ describe('Identity + Tenancy (e2e)', () => {
   it('should register a new user', async () => {
     const res = await ctx
       .http()
-      .post('/api/auth/register')
+      .post('/api/v1/auth/register')
       .send({
         email: uniqueEmail('register'),
         password: 'Sup3rStrongPassw0rd!',
@@ -48,23 +48,23 @@ describe('Identity + Tenancy (e2e)', () => {
       displayName: 'Dup User',
     };
 
-    const first = await ctx.http().post('/api/auth/register').send(payload);
+    const first = await ctx.http().post('/api/v1/auth/register').send(payload);
     expect(first.status).toBe(201);
 
-    const second = await ctx.http().post('/api/auth/register').send(payload);
+    const second = await ctx.http().post('/api/v1/auth/register').send(payload);
     expect(second.status).toBe(409);
   });
 
   it('should log in and receive access + refresh tokens in the response body', async () => {
     const email = uniqueEmail('login');
     const password = 'Sup3rStrongPassw0rd!';
-    await ctx.http().post('/api/auth/register').send({
+    await ctx.http().post('/api/v1/auth/register').send({
       email,
       password,
       displayName: 'Login User',
     });
 
-    const res = await ctx.http().post('/api/auth/login').send({
+    const res = await ctx.http().post('/api/v1/auth/login').send({
       email,
       password,
     });
@@ -77,7 +77,7 @@ describe('Identity + Tenancy (e2e)', () => {
 
   it('should reject login with the wrong password', async () => {
     const email = uniqueEmail('badpw');
-    await ctx.http().post('/api/auth/register').send({
+    await ctx.http().post('/api/v1/auth/register').send({
       email,
       password: 'Sup3rStrongPassw0rd!',
       displayName: 'Bad Password User',
@@ -85,7 +85,7 @@ describe('Identity + Tenancy (e2e)', () => {
 
     const res = await ctx
       .http()
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({ email, password: 'wrong-password' });
 
     expect(res.status).toBe(401);
@@ -94,7 +94,7 @@ describe('Identity + Tenancy (e2e)', () => {
   it('should reject an unauthenticated request to create a tenant', async () => {
     const res = await ctx
       .http()
-      .post('/api/tenants')
+      .post('/api/v1/tenants')
       .send({ appId: '550e8400-e29b-41d4-a716-446655440010', name: 'X' });
 
     expect(res.status).toBe(401);
@@ -103,19 +103,19 @@ describe('Identity + Tenancy (e2e)', () => {
   it('should refresh a session and rotate the refresh token', async () => {
     const email = uniqueEmail('refresh');
     const password = 'Sup3rStrongPassw0rd!';
-    await ctx.http().post('/api/auth/register').send({
+    await ctx.http().post('/api/v1/auth/register').send({
       email,
       password,
       displayName: 'Refresh User',
     });
     const login = await ctx
       .http()
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({ email, password });
 
     const res = await ctx
       .http()
-      .post('/api/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refreshToken: login.body.refreshToken });
 
     expect(res.status).toBe(200);
@@ -126,24 +126,24 @@ describe('Identity + Tenancy (e2e)', () => {
   it('should reject reusing an already-rotated refresh token', async () => {
     const email = uniqueEmail('reuse');
     const password = 'Sup3rStrongPassw0rd!';
-    await ctx.http().post('/api/auth/register').send({
+    await ctx.http().post('/api/v1/auth/register').send({
       email,
       password,
       displayName: 'Reuse User',
     });
     const login = await ctx
       .http()
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({ email, password });
 
     await ctx
       .http()
-      .post('/api/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refreshToken: login.body.refreshToken });
 
     const secondAttempt = await ctx
       .http()
-      .post('/api/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refreshToken: login.body.refreshToken });
 
     expect(secondAttempt.status).toBe(401);
@@ -154,14 +154,14 @@ describe('Identity + Tenancy (e2e)', () => {
       // 1. Register + login the tenant creator.
       const ownerEmail = uniqueEmail('owner');
       const password = 'Sup3rStrongPassw0rd!';
-      await ctx.http().post('/api/auth/register').send({
+      await ctx.http().post('/api/v1/auth/register').send({
         email: ownerEmail,
         password,
         displayName: 'Owner User',
       });
       const ownerLogin = await ctx
         .http()
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: ownerEmail, password });
       const ownerToken = ownerLogin.body.accessToken as string;
 
@@ -169,7 +169,7 @@ describe('Identity + Tenancy (e2e)', () => {
       const appSlug = `app-${Date.now()}`;
       const appRes = await ctx
         .http()
-        .post('/api/apps')
+        .post('/api/v1/apps')
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ slug: appSlug, name: 'Test App' });
       expect(appRes.status).toBe(201);
@@ -178,7 +178,7 @@ describe('Identity + Tenancy (e2e)', () => {
       // 3. Create the tenant — the caller becomes owner automatically.
       const tenantRes = await ctx
         .http()
-        .post('/api/tenants')
+        .post('/api/v1/tenants')
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ appId, name: 'My Tenant' });
       expect(tenantRes.status).toBe(201);
@@ -187,7 +187,7 @@ describe('Identity + Tenancy (e2e)', () => {
 
       // 4. Register a second user to add as a member.
       const memberEmail = uniqueEmail('member');
-      await ctx.http().post('/api/auth/register').send({
+      await ctx.http().post('/api/v1/auth/register').send({
         email: memberEmail,
         password,
         displayName: 'Member User',
@@ -196,7 +196,7 @@ describe('Identity + Tenancy (e2e)', () => {
       // 5. Add them as a member by email.
       const addMemberRes = await ctx
         .http()
-        .post(`/api/tenants/${tenantId}/members`)
+        .post(`/api/v1/tenants/${tenantId}/members`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ email: memberEmail, role: 'member' });
       expect(addMemberRes.status).toBe(201);
@@ -205,7 +205,7 @@ describe('Identity + Tenancy (e2e)', () => {
       // 6. List members — expect the owner (auto-added) + the new member.
       const listRes = await ctx
         .http()
-        .get(`/api/tenants/${tenantId}/members`)
+        .get(`/api/v1/tenants/${tenantId}/members`)
         .set('Authorization', `Bearer ${ownerToken}`);
       expect(listRes.status).toBe(200);
       expect(listRes.body).toHaveLength(2);
@@ -215,7 +215,7 @@ describe('Identity + Tenancy (e2e)', () => {
       // 7. Adding the same member again is rejected.
       const dupMemberRes = await ctx
         .http()
-        .post(`/api/tenants/${tenantId}/members`)
+        .post(`/api/v1/tenants/${tenantId}/members`)
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ email: memberEmail, role: 'member' });
       expect(dupMemberRes.status).toBe(409);
@@ -225,31 +225,31 @@ describe('Identity + Tenancy (e2e)', () => {
   it('should reject adding a member that does not exist', async () => {
     const email = uniqueEmail('creator');
     const password = 'Sup3rStrongPassw0rd!';
-    await ctx.http().post('/api/auth/register').send({
+    await ctx.http().post('/api/v1/auth/register').send({
       email,
       password,
       displayName: 'Creator',
     });
     const login = await ctx
       .http()
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({ email, password });
     const token = login.body.accessToken as string;
 
     const appRes = await ctx
       .http()
-      .post('/api/apps')
+      .post('/api/v1/apps')
       .set('Authorization', `Bearer ${token}`)
       .send({ slug: `app-${Date.now()}`, name: 'App' });
     const tenantRes = await ctx
       .http()
-      .post('/api/tenants')
+      .post('/api/v1/tenants')
       .set('Authorization', `Bearer ${token}`)
       .send({ appId: appRes.body.appId, name: 'Tenant' });
 
     const res = await ctx
       .http()
-      .post(`/api/tenants/${tenantRes.body.tenantId}/members`)
+      .post(`/api/v1/tenants/${tenantRes.body.tenantId}/members`)
       .set('Authorization', `Bearer ${token}`)
       .send({ email: 'does-not-exist@example.com', role: 'member' });
 

@@ -173,13 +173,13 @@ no second adapter is built now.
 
 ## Public API
 
-### REST (`/api/auth/*`)
+### REST (`/api/v1/auth/*`)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/auth/register` | — | Create the user in Keycloak + locally. 201, or 409 if the email is taken. |
-| `POST` | `/auth/login` | — | Verify credentials, issue tokens. 200 `{ accessToken, refreshToken }`, or 401. |
-| `POST` | `/auth/refresh` | — (refresh token in body) | Rotate the refresh token, issue a new access token. 200, or 401. |
+| `POST` | `/api/v1/auth/register` | — | Create the user in Keycloak + locally. 201, or 409 if the email is taken. |
+| `POST` | `/api/v1/auth/login` | — | Verify credentials, issue tokens. 200 `{ accessToken, refreshToken }`, or 401. |
+| `POST` | `/api/v1/auth/refresh` | — (refresh token in body) | Rotate the refresh token, issue a new access token. 200, or 401. |
 
 ### Commands & queries
 

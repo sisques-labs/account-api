@@ -35,12 +35,12 @@ import {
  * Minimal app registry plumbing — not called out as an MVP endpoint in the
  * architecture doc, but `tenant.app_id` is a required FK and nothing else
  * creates an `app` row, so this is the smallest surface that makes
- * `POST /tenants` testable at all.
+ * `POST /api/v1/tenants` testable at all.
  */
 @ApiTags('apps')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('apps')
+@Controller({ path: 'apps', version: '1' })
 export class AppsController {
   private readonly logger = new Logger(AppsController.name);
 
