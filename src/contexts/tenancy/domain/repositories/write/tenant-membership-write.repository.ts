@@ -10,4 +10,5 @@ export interface ITenantMembershipWriteRepository extends IBaseWriteRepository<T
     tenantId: string,
     userId: string,
   ): Promise<TenantMembershipAggregate | null>;
+  deleteAllByTenantId(tenantId: string): Promise<void>;
 }

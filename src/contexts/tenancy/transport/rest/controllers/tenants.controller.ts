@@ -2,11 +2,15 @@ import { AddTenantMemberCommand } from '@contexts/tenancy/application/commands/a
 import { IAddTenantMemberResult } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member-result.interface';
 import { CreateTenantCommand } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.command';
 import { ICreateTenantResult } from '@contexts/tenancy/application/commands/create-tenant/create-tenant-result.interface';
+import { DeleteTenantCommand } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.command';
+import { UpdateTenantCommand } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.command';
+import { IUpdateTenantResult } from '@contexts/tenancy/application/commands/update-tenant/update-tenant-result.interface';
 import { TenantMembershipFindByTenantIdQuery } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.query';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 import { AddTenantMemberDto } from '@contexts/tenancy/transport/rest/dtos/add-tenant-member.dto';
 import { CreateTenantDto } from '@contexts/tenancy/transport/rest/dtos/create-tenant.dto';
 import { TenantMembershipRestResponseDto } from '@contexts/tenancy/transport/rest/dtos/tenant-membership-rest-response.dto';
+import { UpdateTenantDto } from '@contexts/tenancy/transport/rest/dtos/update-tenant.dto';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
 import {
   CurrentUser,
@@ -16,12 +20,14 @@ import { JwtAuthGuard } from '@core/security/guards/jwt-auth.guard';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Logger,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -66,6 +72,51 @@ export class TenantsController {
         slug: dto.slug,
         creatorUserId: user.userId,
       }),
+    );
+  }
+
+  @Patch(':tenantId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a tenant — owner only' })
+  @ApiResponse({ status: 200, description: 'Tenant updated' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not an owner of the tenant',
+  })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  @ApiResponse({ status: 409, description: 'Slug already taken for this app' })
+  async update(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Body() dto: UpdateTenantDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<IUpdateTenantResult> {
+    this.logger.log(`PATCH /tenants/${tenantId} requester=${user.userId}`);
+    return this.commandBus.execute(
+      new UpdateTenantCommand({
+        tenantId,
+        requesterUserId: user.userId,
+        name: dto.name,
+        slug: dto.slug,
+      }),
+    );
+  }
+
+  @Delete(':tenantId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a tenant — owner only' })
+  @ApiResponse({ status: 204, description: 'Tenant deleted' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller is not an owner of the tenant',
+  })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  async remove(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<void> {
+    this.logger.log(`DELETE /tenants/${tenantId} requester=${user.userId}`);
+    await this.commandBus.execute(
+      new DeleteTenantCommand({ tenantId, requesterUserId: user.userId }),
     );
   }
 

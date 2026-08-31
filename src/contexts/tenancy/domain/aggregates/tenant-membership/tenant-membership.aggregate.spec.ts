@@ -1,4 +1,5 @@
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { TenantMembershipCreatedEvent } from '@contexts/tenancy/domain/events/tenant-membership-created/tenant-membership-created.event';
 
 import { TenantMembershipAggregate } from './tenant-membership.aggregate';
@@ -14,7 +15,7 @@ const buildMembership = (): TenantMembershipAggregate =>
     .withId(MEMBERSHIP_ID)
     .withTenantId(TENANT_ID)
     .withUserId(USER_ID)
-    .withRole('owner')
+    .withRole(TenantRoleEnum.OWNER)
     .withCreatedAt(NOW)
     .withUpdatedAt(NOW)
     .build();
@@ -26,7 +27,7 @@ describe('TenantMembershipAggregate', () => {
     expect(membership.id.value).toBe(MEMBERSHIP_ID);
     expect(membership.tenantId.value).toBe(TENANT_ID);
     expect(membership.userId.value).toBe(USER_ID);
-    expect(membership.role.value).toBe('owner');
+    expect(membership.role.value).toBe(TenantRoleEnum.OWNER);
     expect(membership.role.isOwner()).toBe(true);
   });
 
@@ -41,7 +42,7 @@ describe('TenantMembershipAggregate', () => {
       id: MEMBERSHIP_ID,
       tenantId: TENANT_ID,
       userId: USER_ID,
-      role: 'owner',
+      role: TenantRoleEnum.OWNER,
     });
   });
 
@@ -50,7 +51,7 @@ describe('TenantMembershipAggregate', () => {
       id: MEMBERSHIP_ID,
       tenantId: TENANT_ID,
       userId: USER_ID,
-      role: 'owner',
+      role: TenantRoleEnum.OWNER,
     });
   });
 });

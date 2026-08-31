@@ -3,6 +3,7 @@ import { IUserLookupPort } from '@contexts/tenancy/application/ports/user-lookup
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
 import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-membership/member-user-not-found.exception';
 import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership/tenant-membership-already-exists.exception';
 import { ITenantMembershipWriteRepository } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
@@ -24,7 +25,7 @@ describe('AddTenantMemberCommandHandler', () => {
   const command = new AddTenantMemberCommand({
     tenantId: TENANT_ID,
     email: 'member@example.com',
-    role: 'member',
+    role: TenantRoleEnum.MEMBER,
   });
 
   beforeEach(() => {
@@ -34,6 +35,7 @@ describe('AddTenantMemberCommandHandler', () => {
       findByCriteria: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
+      deleteAllByTenantId: jest.fn(),
     };
     userLookupPort = { findUserIdByEmail: jest.fn() };
     assertTenantExistsService = {
@@ -91,7 +93,7 @@ describe('AddTenantMemberCommandHandler', () => {
       membershipId: expect.any(String),
       tenantId: TENANT_ID,
       userId: USER_ID,
-      role: 'member',
+      role: TenantRoleEnum.MEMBER,
     });
   });
 });

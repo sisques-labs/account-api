@@ -1,5 +1,6 @@
 import { MemberUserNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant-membership/member-user-not-found.exception';
 import { TenantMembershipAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant-membership/tenant-membership-already-exists.exception';
+import { NotTenantOwnerException } from '@contexts/tenancy/domain/exceptions/tenant/not-tenant-owner.exception';
 import { TenantNotFoundException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-not-found.exception';
 import { TenantSlugAlreadyExistsException } from '@contexts/tenancy/domain/exceptions/tenant/tenant-slug-already-exists.exception';
 import { HttpStatus } from '@nestjs/common';
@@ -40,6 +41,14 @@ describe('resolveTenancyExceptionStatus', () => {
     expect(
       resolveTenancyExceptionStatus(new MemberUserNotFoundException('x')),
     ).toBe(HttpStatus.NOT_FOUND);
+  });
+
+  it('should map NotTenantOwnerException to 403', () => {
+    expect(
+      resolveTenancyExceptionStatus(
+        new NotTenantOwnerException('tenant-1', 'user-1'),
+      ),
+    ).toBe(HttpStatus.FORBIDDEN);
   });
 
   it('should return undefined for an exception it does not recognize', () => {

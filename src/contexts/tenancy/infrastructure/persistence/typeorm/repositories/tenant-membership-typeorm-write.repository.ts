@@ -45,4 +45,8 @@ export class TenantMembershipTypeOrmWriteRepository implements ITenantMembership
   async delete(id: string): Promise<void> {
     await this.repo.delete(id);
   }
+
+  async deleteAllByTenantId(tenantId: string): Promise<void> {
+    await this.repo.delete({ tenantId });
+  }
 }

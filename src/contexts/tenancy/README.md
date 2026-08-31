@@ -63,6 +63,28 @@ there is no two-step "create tenant, then separately add yourself as owner"
 because the invariant (every tenant has an owner) must never be violated,
 even transiently.
 
+## How updating/deleting a tenant works
+
+```
+PATCH /tenants/{tenantId}   ->  UpdateTenantCommand { tenantId, requesterUserId, name?, slug? }
+DELETE /tenants/{tenantId}  ->  DeleteTenantCommand { tenantId, requesterUserId }
+                             ->  {Update,Delete}TenantCommandHandler
+                                 1. AssertTenantExistsService (404)
+                                 2. AssertTenantOwnerService — requester must hold
+                                    the "owner" membership for this tenant (403
+                                    NotTenantOwnerException otherwise)
+                                 3. Update: AssertTenantSlugAvailableService, but
+                                    only when the new slug actually differs from
+                                    the tenant's current one (409 otherwise)
+                                 4. tenant.update()/tenant.delete() -> save/delete
+```
+
+Delete is a hard delete — the tenant row is physically removed. There is no
+DB-level FK cascade from `tenant_membership.tenant_id`, so
+`DeleteTenantCommandHandler` also bulk-deletes the tenant's memberships
+(`ITenantMembershipWriteRepository.deleteAllByTenantId`) in the same
+transaction-less sequence, to avoid leaving orphan rows.
+
 ## How adding a member works
 
 ```
@@ -120,6 +142,8 @@ login/refresh) — see `auth`'s README.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/api/v1/tenants` | JWT | Create a tenant; caller becomes owner. 201, 404 (app), or 409 (slug). |
+| `PATCH` | `/api/v1/tenants/{tenantId}` | JWT, owner | Update a tenant's `name`/`slug`. 200, 403 (not owner), 404, or 409 (slug). |
+| `DELETE` | `/api/v1/tenants/{tenantId}` | JWT, owner | Hard-delete a tenant and its memberships. 204, 403 (not owner), or 404. |
 | `POST` | `/api/v1/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
 | `GET` | `/api/v1/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
 
@@ -128,6 +152,8 @@ login/refresh) — see `auth`'s README.
 | Class | Description |
 |-------|-------------|
 | `CreateTenantCommand` | Creates a tenant + owner membership for the creator |
+| `UpdateTenantCommand` | Owner-only rename/re-slug of a tenant |
+| `DeleteTenantCommand` | Owner-only hard delete of a tenant + its memberships |
 | `AddTenantMemberCommand` | Adds an existing user (by email) as a member |
 | `AppFindByCriteriaQuery` | Lists apps with pagination/filters — lives in `app` context |
 | `TenantMembershipFindByTenantIdQuery` | Lists a tenant's members |
@@ -135,7 +161,8 @@ login/refresh) — see `auth`'s README.
 
 ### Domain events
 
-`TenantCreatedEvent`, `TenantMembershipCreatedEvent`.
+`TenantCreatedEvent`, `TenantUpdatedEvent` (+ `TenantNameChangedEvent`/`TenantSlugChangedEvent`),
+`TenantDeletedEvent`, `TenantMembershipCreatedEvent`.
 
 ---
 

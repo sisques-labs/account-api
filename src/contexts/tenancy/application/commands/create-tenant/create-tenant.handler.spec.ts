@@ -40,6 +40,7 @@ describe('CreateTenantCommandHandler', () => {
       findByCriteria: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
+      deleteAllByTenantId: jest.fn(),
     };
     assertAppExistsService = {
       execute: jest.fn(),
@@ -100,7 +101,7 @@ describe('CreateTenantCommandHandler', () => {
     const savedMembership =
       tenantMembershipWriteRepository.save.mock.calls[0][0];
     expect(savedMembership.userId.value).toBe(USER_ID);
-    expect(savedMembership.role.value).toBe('owner');
+    expect(savedMembership.role.value).toBe('OWNER');
     expect(savedMembership.tenantId.value).toBe(result.tenantId);
     expect(result).toEqual({
       tenantId: expect.any(String),

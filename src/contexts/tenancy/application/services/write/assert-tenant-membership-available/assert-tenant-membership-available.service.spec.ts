@@ -16,6 +16,7 @@ describe('AssertTenantMembershipAvailableService', () => {
       findByCriteria: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
+      deleteAllByTenantId: jest.fn(),
     };
     service = new AssertTenantMembershipAvailableService(
       tenantMembershipWriteRepository,

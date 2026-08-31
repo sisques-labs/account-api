@@ -1,10 +1,11 @@
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { TenantRoleValueObject } from '@contexts/tenancy/domain/value-objects/tenant-role/tenant-role.vo';
 import { EmailValueObject, UuidValueObject } from '@sisques-labs/nestjs-kit';
 
 export interface AddTenantMemberCommandInput {
   tenantId: string;
   email: string;
-  role: string;
+  role: TenantRoleEnum;
 }
 
 export class AddTenantMemberCommand {

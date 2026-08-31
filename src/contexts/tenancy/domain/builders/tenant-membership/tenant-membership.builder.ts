@@ -1,4 +1,5 @@
 import { TenantMembershipAggregate } from '@contexts/tenancy/domain/aggregates/tenant-membership/tenant-membership.aggregate';
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { TenantMembershipViewModel } from '@contexts/tenancy/domain/view-models/tenant-membership.view-model';
 import { TenantRoleValueObject } from '@contexts/tenancy/domain/value-objects/tenant-role/tenant-role.vo';
 import { Injectable } from '@nestjs/common';
@@ -47,7 +48,7 @@ export class TenantMembershipBuilder extends BaseBuilder<
       id: new UuidValueObject(this._id),
       tenantId: new UuidValueObject(this._tenantId),
       userId: new UuidValueObject(this._userId),
-      role: new TenantRoleValueObject(this._role),
+      role: new TenantRoleValueObject(this._role as TenantRoleEnum),
       createdAt: new DateValueObject(this._createdAt ?? new Date()),
       updatedAt: new DateValueObject(this._updatedAt ?? new Date()),
     });

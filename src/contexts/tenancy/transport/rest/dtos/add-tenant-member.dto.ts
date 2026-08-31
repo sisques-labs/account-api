@@ -1,13 +1,13 @@
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum } from 'class-validator';
 
 export class AddTenantMemberDto {
   @ApiProperty({ example: 'member@example.com' })
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: 'member' })
-  @IsString()
-  @MinLength(1)
-  role!: string;
+  @ApiProperty({ enum: TenantRoleEnum, example: TenantRoleEnum.MEMBER })
+  @IsEnum(TenantRoleEnum)
+  role!: TenantRoleEnum;
 }

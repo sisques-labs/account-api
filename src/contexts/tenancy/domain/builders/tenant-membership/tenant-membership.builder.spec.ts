@@ -1,3 +1,4 @@
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import { FieldIsRequiredException } from '@sisques-labs/nestjs-kit';
 
 import { TenantMembershipBuilder } from './tenant-membership.builder';
@@ -19,12 +20,12 @@ describe('TenantMembershipBuilder', () => {
         .withId('550e8400-e29b-41d4-a716-446655440030')
         .withTenantId(TENANT_ID)
         .withUserId(USER_ID)
-        .withRole('owner')
+        .withRole(TenantRoleEnum.OWNER)
         .withCreatedAt(NOW)
         .withUpdatedAt(NOW)
         .build();
 
-      expect(membership.role.value).toBe('owner');
+      expect(membership.role.value).toBe(TenantRoleEnum.OWNER);
     });
 
     it('should throw when tenantId is missing', () => {
@@ -32,7 +33,7 @@ describe('TenantMembershipBuilder', () => {
         builder
           .withId('550e8400-e29b-41d4-a716-446655440030')
           .withUserId(USER_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .withCreatedAt(NOW)
           .withUpdatedAt(NOW)
           .build(),
@@ -44,7 +45,7 @@ describe('TenantMembershipBuilder', () => {
         builder
           .withId('550e8400-e29b-41d4-a716-446655440030')
           .withTenantId(TENANT_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .withCreatedAt(NOW)
           .withUpdatedAt(NOW)
           .build(),
@@ -70,12 +71,12 @@ describe('TenantMembershipBuilder', () => {
         .withId('550e8400-e29b-41d4-a716-446655440030')
         .withTenantId(TENANT_ID)
         .withUserId(USER_ID)
-        .withRole('owner')
+        .withRole(TenantRoleEnum.OWNER)
         .withCreatedAt(NOW)
         .withUpdatedAt(NOW)
         .buildViewModel();
 
-      expect(viewModel.role).toBe('owner');
+      expect(viewModel.role).toBe(TenantRoleEnum.OWNER);
     });
 
     it('should throw when tenantId is missing', () => {
@@ -83,7 +84,7 @@ describe('TenantMembershipBuilder', () => {
         builder
           .withId('550e8400-e29b-41d4-a716-446655440030')
           .withUserId(USER_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .buildViewModel(),
       ).toThrow(FieldIsRequiredException);
     });
@@ -93,7 +94,7 @@ describe('TenantMembershipBuilder', () => {
         builder
           .withId('550e8400-e29b-41d4-a716-446655440030')
           .withTenantId(TENANT_ID)
-          .withRole('owner')
+          .withRole(TenantRoleEnum.OWNER)
           .buildViewModel(),
       ).toThrow(FieldIsRequiredException);
     });

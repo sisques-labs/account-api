@@ -1,5 +1,7 @@
 import { AddTenantMemberCommandHandler } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.handler';
 import { CreateTenantCommandHandler } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.handler';
+import { DeleteTenantCommandHandler } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.handler';
+import { UpdateTenantCommandHandler } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.handler';
 import { APP_LOOKUP_PORT } from '@contexts/tenancy/application/ports/app-lookup.port';
 import { USER_LOOKUP_PORT } from '@contexts/tenancy/application/ports/user-lookup.port';
 import { TenantMembershipFindByTenantIdQueryHandler } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.handler';
@@ -7,6 +9,7 @@ import { TenantMembershipFindByUserIdQueryHandler } from '@contexts/tenancy/appl
 import { AssertAppExistsService } from '@contexts/tenancy/application/services/write/assert-app-exists/assert-app-exists.service';
 import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
 import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
+import { AssertTenantOwnerService } from '@contexts/tenancy/application/services/write/assert-tenant-owner/assert-tenant-owner.service';
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
 import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
@@ -30,6 +33,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 const COMMAND_HANDLERS = [
   CreateTenantCommandHandler,
+  UpdateTenantCommandHandler,
+  DeleteTenantCommandHandler,
   AddTenantMemberCommandHandler,
 ];
 
@@ -42,6 +47,7 @@ const APPLICATION_SERVICES = [
   AssertAppExistsService,
   AssertTenantSlugAvailableService,
   AssertTenantExistsService,
+  AssertTenantOwnerService,
   AssertTenantMembershipAvailableService,
 ];
 

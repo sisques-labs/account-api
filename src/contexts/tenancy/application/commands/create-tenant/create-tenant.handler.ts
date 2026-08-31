@@ -4,6 +4,7 @@ import { AssertAppExistsService } from '@contexts/tenancy/application/services/w
 import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
 import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
 import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TenantRoleEnum } from '@contexts/tenancy/domain/enums/tenant-role.enum';
 import {
   ITenantWriteRepository,
   TENANT_WRITE_REPOSITORY,
@@ -12,7 +13,6 @@ import {
   ITenantMembershipWriteRepository,
   TENANT_MEMBERSHIP_WRITE_REPOSITORY,
 } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
-import { TenantRoleValueObject } from '@contexts/tenancy/domain/value-objects/tenant-role/tenant-role.vo';
 import { Inject, Logger } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { UuidValueObject } from '@sisques-labs/nestjs-kit';
@@ -59,7 +59,7 @@ export class CreateTenantCommandHandler implements ICommandHandler<CreateTenantC
       .withId(UuidValueObject.generate().value)
       .withTenantId(tenant.id.value)
       .withUserId(creatorUserId.value)
-      .withRole(TenantRoleValueObject.OWNER)
+      .withRole(TenantRoleEnum.OWNER)
       .withCreatedAt(membershipNow)
       .withUpdatedAt(membershipNow)
       .build();
