@@ -53,6 +53,28 @@ jobs:
         with:
           node_version: "22"
 
+      # Not a `services:` container: those start before checkout, so a
+      # `docker run` step (after Setup, which checks the repo out) is the
+      # only way to bind-mount docker/keycloak/realm-export.json.
+      - name: Start Keycloak
+        run: |
+          docker run -d --name keycloak-test \
+            -p 8082:8080 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+            -v "${{ github.workspace }}/docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro" \
+            quay.io/keycloak/keycloak:26.0 start-dev --import-realm
+
+      - name: Wait for Keycloak
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8082/realms/sisques-account/.well-known/openid-configuration > /dev/null && exit 0
+            sleep 2
+          done
+          echo "Keycloak did not become ready in time" >&2
+          docker logs keycloak-test
+          exit 1
+
       - name: Install dependencies
         uses: sisques-labs/workflows/.github/actions/install@main
         with:

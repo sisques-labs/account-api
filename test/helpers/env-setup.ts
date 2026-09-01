@@ -28,3 +28,16 @@ process.env.DATABASE_DATABASE =
   process.env.DATABASE_DATABASE ?? 'nestjs_template_test';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:3001';
 process.env.NODE_ENV = 'test';
+
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-jwt-secret';
+process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '15m';
+process.env.REFRESH_TOKEN_TTL_DAYS = process.env.REFRESH_TOKEN_TTL_DAYS ?? '30';
+// docker-compose.test.yml's keycloak-test service (port 8082, not 8081 —
+// account-api's own dev Keycloak — to avoid colliding when both run).
+process.env.KEYCLOAK_BASE_URL =
+  process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8082';
+process.env.KEYCLOAK_REALM = process.env.KEYCLOAK_REALM ?? 'sisques-account';
+process.env.KEYCLOAK_CLIENT_ID =
+  process.env.KEYCLOAK_CLIENT_ID ?? 'account-api';
+process.env.KEYCLOAK_CLIENT_SECRET =
+  process.env.KEYCLOAK_CLIENT_SECRET ?? 'local-dev-secret-change-me';
