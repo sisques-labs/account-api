@@ -64,14 +64,27 @@ src/contexts/{context}/
 │   └── decorators/        {name}.decorator.ts
 ├── transport/
 │   ├── graphql/
-│   │   ├── resolvers/     {name}.resolver.ts         — CommandBus/QueryBus only
-│   │   ├── dtos/          {name}.input.ts
-│   │   │                  {name}-filter.input.ts     — createFilterInput({Name}QueryableField, '{Name}')
-│   │   │                  {name}-sort.input.ts        — createSortInput({Name}QueryableField, '{Name}')
-│   │   ├── objects/       {name}.object.ts
-│   │   ├── mappers/       {name}.mapper.ts
-│   │   ├── enums/         {name}-registered-enums.graphql.ts
-│   │   │                  {name}-queryable-field.enum.ts  — whitelist for findByCriteria
+│   │   ├── resolvers/{name}/
+│   │   │   ├── {name}-queries.resolver.ts            — @Query only; QueryBus + {Name}GraphQLMapper
+│   │   │   ├── {name}-mutations.resolver.ts          — @Mutation only; CommandBus + MutationResponseGraphQLMapper, @UseGuards(JwtAuthGuard)
+│   │   │   ├── {name}-resolved-fields.resolver.ts    — @ResolveField for same-context nested fields
+│   │   │   └── {name}-{other}-resolved-field.resolver.ts — one per cross-context field; injects that context's Port
+│   │   ├── dtos/
+│   │   │   ├── requests/{name}/
+│   │   │   │   ├── {name}-create.request.dto.ts       — @InputType('{Name}CreateRequestDto')
+│   │   │   │   ├── {name}-update.request.dto.ts
+│   │   │   │   ├── {name}-delete.request.dto.ts
+│   │   │   │   ├── {name}-find-by-id.request.dto.ts
+│   │   │   │   ├── {name}-find-by-criteria.request.dto.ts — extends BaseFindByCriteriaInput; declares filters/sorts
+│   │   │   │   ├── {name}-filter.input.ts             — createFilterInput({Name}QueryableField, '{Name}')
+│   │   │   │   └── {name}-sort.input.ts               — createSortInput({Name}QueryableField, '{Name}')
+│   │   │   └── responses/{name}/
+│   │   │       └── {name}.response.dto.ts             — {Name}ResponseDto + Paginated{Name}ResultDto (extends BasePaginatedResultDto) + any {Name}Linked{Other}ResponseDto
+│   │   ├── mappers/{name}/
+│   │   │   └── {name}.mapper.ts                       — {Name}GraphQLMapper: ViewModel → ResponseDto, + paginated/linked variants
+│   │   ├── enums/{name}/
+│   │   │   ├── {name}-registered-enums.graphql.ts
+│   │   │   └── {name}-queryable-field.enum.ts         — whitelist for findByCriteria
 │   │   └── registries/    {name}-filterable-fields.registry.ts — FilterFieldRegistry, +.spec.ts
 │   ├── rest/
 │   │   ├── {name}.controller.ts
@@ -83,6 +96,32 @@ src/contexts/{context}/
 ```
 
 Drop the `graphql/`, `rest/`, or `mcp/` subtree entirely for a context that doesn't need that transport — none of the three is mandatory per context.
+
+## GraphQL Resolver Split (mandatory shape, every context that exposes GraphQL)
+
+Never put queries, mutations, and resolved fields in one `{name}.resolver.ts`.
+Split by responsibility, one resolver class per file, all under
+`transport/graphql/resolvers/{name}/`:
+
+| Resolver | Bus | Notes |
+|----------|-----|-------|
+| `{name}-queries.resolver.ts` (`{Name}QueriesResolver`) | `QueryBus` | `@Resolver(() => {Name}ResponseDto)`. One `@Query` per read use case (`{name}FindById`, `{name}sFindByCriteria` with `FilterValidationPipe`). Injects `{Name}GraphQLMapper` to convert the ViewModel result to the response DTO. |
+| `{name}-mutations.resolver.ts` (`{Name}MutationsResolver`) | `CommandBus` | `@Resolver()` + `@UseGuards(JwtAuthGuard)` (once auth exists). One `@Mutation(() => MutationResponseDto)` per write use case, returning `MutationResponseGraphQLMapper.toResponseDto({ success, message, id })`. |
+| `{name}-resolved-fields.resolver.ts` (`{Name}ResolvedFieldsResolver`) | — | `@Resolver(() => {Name}ResponseDto)`. `@ResolveField` for nested data resolved from *this* context (e.g. a same-context child ViewModel). |
+| `{name}-{other}-resolved-field.resolver.ts` (`{Name}{Other}ResolvedFieldResolver`) | — | One per **cross-context** resolved field. Injects that context's port (`application/ports/{other}.port.ts`, `@Inject({OTHER}_PORT)`) — never another context's bus directly. |
+
+This mirrors the cross-context boundary rule: a resolved field that reaches
+another bounded context does so through a port/adapter, exactly like an
+infrastructure adapter would, just triggered from a `@ResolveField` instead of
+a command/query handler.
+
+Response DTOs for one aggregate all live together in the single
+`dtos/responses/{name}/{name}.response.dto.ts` file: the main
+`{Name}ResponseDto`, `Paginated{Name}ResultDto extends BasePaginatedResultDto`,
+and any `{Name}Linked{Other}ResponseDto` used by a resolved field. Request DTOs
+instead get one file per use case under `dtos/requests/{name}/` (create,
+update, delete, find-by-id, find-by-criteria, filter, sort) so validation
+decorators for each mutation/query stay isolated.
 
 ## Decision Gates
 
@@ -104,7 +143,7 @@ fields. This is the pattern that prevents two recurring bugs: `findByCriteria`
 silently ignoring `criteria.filters` (pagination applied, filters dropped),
 and `filter.field` interpolated straight into SQL with zero validation.
 
-1. **Queryable field enum** — `transport/graphql/enums/{name}-queryable-field.enum.ts`:
+1. **Queryable field enum** — `transport/graphql/enums/{name}/{name}-queryable-field.enum.ts`:
    a `{Name}QueryableField` enum whitelisting every scalar/FK field on that
    context's ViewModel that maps to a real column. Register it via
    `registerEnumType` as `{Name}QueryableFieldEnum` in the context's existing
@@ -119,7 +158,7 @@ and `filter.field` interpolated straight into SQL with zero validation.
    duplicated string list; the domain enum is the single source of truth.
    Co-locate a `.spec.ts` asserting every enum value has a registry entry,
    plus enum-membership and whitelist-rejection cases.
-3. **Filter/sort inputs** — `transport/graphql/dtos/requests/{name}-filter.input.ts` / `-sort.input.ts`:
+3. **Filter/sort inputs** — `transport/graphql/dtos/requests/{name}/{name}-filter.input.ts` / `-sort.input.ts`:
    ```ts
    @InputType('{Name}FilterInput')
    export class {Name}FilterInput extends createFilterInput({Name}QueryableField, '{Name}') {}
@@ -158,6 +197,12 @@ and `filter.field` interpolated straight into SQL with zero validation.
 | Filterable-fields registry | `{name}-filterable-fields.registry.ts` (+ `.spec.ts`) | `order-filterable-fields.registry.ts` |
 | Filter input | `{name}-filter.input.ts`, class `{Name}FilterInput` | `order-filter.input.ts` |
 | Sort input | `{name}-sort.input.ts`, class `{Name}SortInput` | `order-sort.input.ts` |
+| GraphQL queries resolver | `{name}-queries.resolver.ts`, class `{Name}QueriesResolver` | `order-queries.resolver.ts` |
+| GraphQL mutations resolver | `{name}-mutations.resolver.ts`, class `{Name}MutationsResolver` | `order-mutations.resolver.ts` |
+| GraphQL resolved-field resolver | `{name}-resolved-fields.resolver.ts` (same-context) or `{name}-{other}-resolved-field.resolver.ts` (cross-context) | `order-customer-resolved-field.resolver.ts` |
+| GraphQL mapper | `{name}.mapper.ts`, class `{Name}GraphQLMapper` | `order.mapper.ts` |
+| GraphQL response DTO | `{name}.response.dto.ts`, class `{Name}ResponseDto` | `order.response.dto.ts` |
+| GraphQL request DTO | `{name}-{create\|update\|delete\|find-by-id\|find-by-criteria}.request.dto.ts` | `order-create.request.dto.ts` |
 
 ## References
 
