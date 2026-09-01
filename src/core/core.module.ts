@@ -57,7 +57,7 @@ const CORE_MODULES = [
   // Uses the default context builder (`{ requestId }`) — pass a
   // `contextBuilder` that reads `JwtAuthGuard`'s claims here if/when an MCP
   // tool needs the caller's identity.
-  McpModule.forRoot({ name: 'nestjs-template', version: '0.1.0' }),
+  McpModule.forRoot({ name: 'account-api', version: '0.1.0' }),
 ];
 
 @Module({
