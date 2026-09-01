@@ -1,8 +1,11 @@
+import { CreateIdentityAndTenancy1788165600000 } from '../../src/database/migrations/1788165600000-CreateIdentityAndTenancy';
+import { SplitUserAndAuthSession1788181125000 } from '../../src/database/migrations/1788181125000-SplitUserAndAuthSession';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-// Add migration imports here as the first bounded context introduces them,
-// e.g. `import { CreateOrders1780000000000 } from '../../src/database/migrations/1780000000000-CreateOrders';`
-const TEST_MIGRATIONS: DataSourceOptions['migrations'] = [];
+const TEST_MIGRATIONS: DataSourceOptions['migrations'] = [
+  CreateIdentityAndTenancy1788165600000,
+  SplitUserAndAuthSession1788181125000,
+];
 
 export function getTestDataSourceOptions(): DataSourceOptions {
   return {

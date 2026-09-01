@@ -1,3 +1,13 @@
+// Deliberate, documented exception to "core never depends on contexts": this
+// is the one extension point where the global filter needs every bounded
+// context's exception→HTTP-status mapping. Each context exports its own
+// `transport/exceptions/{name}-exception.filter.ts` resolver, and this file
+// is the single place that aggregates them — contexts still never import
+// each other or import core's domain logic, only this filter reaches out.
+import { resolveAppExceptionStatus } from '@contexts/app/transport/exceptions/app-exception.filter';
+import { resolveAuthExceptionStatus } from '@contexts/auth/transport/exceptions/auth-exception.filter';
+import { resolveTenancyExceptionStatus } from '@contexts/tenancy/transport/exceptions/tenancy-exception.filter';
+import { resolveUserExceptionStatus } from '@contexts/user/transport/exceptions/user-exception.filter';
 import {
   ArgumentsHost,
   Catch,
@@ -13,14 +23,15 @@ import { GraphQLError } from 'graphql';
  * Per-context HTTP status resolvers, registered here as bounded contexts are
  * added. Each function returns a status for the exceptions it recognises, or
  * `undefined` to let the next resolver (or the default) decide.
- *
- * Example, once a `users` context exists:
- *   import { resolveUsersExceptionStatus } from '@contexts/users/transport/exceptions/users-exception.filter';
- *   const EXCEPTION_STATUS_RESOLVERS = [resolveUsersExceptionStatus];
  */
 const EXCEPTION_STATUS_RESOLVERS: Array<
   (exception: BaseException) => number | undefined
-> = [];
+> = [
+  resolveUserExceptionStatus,
+  resolveAuthExceptionStatus,
+  resolveAppExceptionStatus,
+  resolveTenancyExceptionStatus,
+];
 
 @Catch(BaseException)
 export class BaseExceptionFilter

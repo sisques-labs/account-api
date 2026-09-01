@@ -14,3 +14,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Only needed for the `identity` context's integration/e2e specs that
+  # exercise the real KeycloakIdentityProviderAdapter (register/login flows).
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ['start-dev', '--import-realm']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - '8082:8080'
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
