@@ -1,11 +1,17 @@
 import { DataSource } from 'typeorm';
 
 /**
- * Application tables truncated between DB-backed test cases. Empty until the
- * first bounded context adds entities — update this list when a new @Entity
- * is added so integration/E2E specs stay isolated between tests.
+ * Application tables truncated between DB-backed test cases. Update this
+ * list when a new @Entity is added so integration/E2E specs stay isolated
+ * between tests. Order doesn't matter — CASCADE handles FK dependencies.
  */
-export const TRUNCATE_TABLES: readonly string[] = [];
+export const TRUNCATE_TABLES: readonly string[] = [
+  'tenant_membership',
+  'tenant',
+  'app',
+  'session',
+  'user',
+];
 
 /**
  * Truncates all application tables and restarts identity sequences.

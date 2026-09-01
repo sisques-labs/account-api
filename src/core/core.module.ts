@@ -1,13 +1,15 @@
-import { appConfig } from './config/app.config';
-import { validateEnv } from './config/env.validation';
-import { kafkaConfig } from './config/kafka.config';
-import { otelConfig } from './config/otel.config';
-import { postgresConfig } from './config/postgres.config';
-import { AGGREGATE_MODULE_MAP } from './messaging/domain/topics/aggregate-module.map.generated';
-import { HealthModule } from './health/health.module';
-import { ObservabilityModule } from './observability/observability.module';
-import { PingResolver } from './transport/graphql/resolvers/ping.resolver';
-import './transport/graphql/registered-enums.graphql';
+import { appConfig } from '@core/config/app.config';
+import { authConfig } from '@core/config/auth.config';
+import { validateEnv } from '@core/config/env.validation';
+import { kafkaConfig } from '@core/config/kafka.config';
+import { otelConfig } from '@core/config/otel.config';
+import { postgresConfig } from '@core/config/postgres.config';
+import { AGGREGATE_MODULE_MAP } from '@core/messaging/domain/topics/aggregate-module.map.generated';
+import { HealthModule } from '@core/health/health.module';
+import { ObservabilityModule } from '@core/observability/observability.module';
+import { SecurityModule } from '@core/security/security.module';
+import { PingResolver } from '@core/transport/graphql/resolvers/ping.resolver';
+import '@core/transport/graphql/registered-enums.graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -18,7 +20,7 @@ import { SharedGraphQLModule } from '@sisques-labs/nestjs-kit/graphql';
 import { McpModule } from '@sisques-labs/nestjs-kit/mcp';
 import { MessagingModule } from '@sisques-labs/nestjs-kit/messaging';
 
-import { SupportModule } from '../support/support.module';
+import { SupportModule } from '@support/support.module';
 
 // Cross-cutting infrastructure every bounded context relies on: config, DB,
 // transports, observability. Add new app-wide wiring here, not in AppModule.
@@ -29,7 +31,7 @@ const CORE_MODULES = [
   ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-    load: [postgresConfig, appConfig, otelConfig, kafkaConfig],
+    load: [postgresConfig, appConfig, authConfig, otelConfig, kafkaConfig],
     cache: true,
   }),
   TypeOrmModule.forRootAsync({
@@ -51,8 +53,10 @@ const CORE_MODULES = [
   ObservabilityModule,
   MessagingModule.forRoot({ aggregateModuleMap: AGGREGATE_MODULE_MAP }),
   HealthModule,
-  // No auth yet, so the default context builder (`{ requestId }`) is used —
-  // pass `contextBuilder` here once this service resolves an identity.
+  SecurityModule,
+  // Uses the default context builder (`{ requestId }`) — pass a
+  // `contextBuilder` that reads `JwtAuthGuard`'s claims here if/when an MCP
+  // tool needs the caller's identity.
   McpModule.forRoot({ name: 'nestjs-template', version: '0.1.0' }),
 ];
 

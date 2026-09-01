@@ -29,6 +29,16 @@ describe('App bootstrap (e2e)', () => {
     expect(res.body.status).toBe('ok');
   });
 
+  it('business REST routes are versioned under /api/v1', async () => {
+    const unversioned = await ctx.http().post('/api/auth/register').send({
+      email: 'version-check@example.com',
+      password: 'Sup3rStrongPassw0rd!',
+      displayName: 'Version Check',
+    });
+
+    expect(unversioned.status).toBe(404);
+  });
+
   it('GraphQL endpoint resolves the placeholder ping query', async () => {
     const res = await gql(ctx.app, '{ ping }');
 
