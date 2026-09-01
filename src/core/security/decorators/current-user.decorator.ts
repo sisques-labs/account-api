@@ -1,5 +1,6 @@
 import { IAccessTokenClaims } from '@core/security/access-token-claims.interface';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { Request } from 'express';
 
 export interface CurrentUserPayload {
@@ -12,15 +13,21 @@ export interface CurrentUserPayload {
 /**
  * Extracted from the `@CurrentUser()` factory so it can be unit tested
  * directly — `createParamDecorator` factories aren't callable as plain
- * functions.
+ * functions. Handles both REST and GraphQL execution contexts, same as
+ * `JwtAuthGuard`.
  */
 export function extractCurrentUser(
   _data: unknown,
   context: ExecutionContext,
 ): CurrentUserPayload {
-  const request = context
-    .switchToHttp()
-    .getRequest<Request & { user: IAccessTokenClaims }>();
+  const request =
+    context.getType<string>() === 'graphql'
+      ? GqlExecutionContext.create(context).getContext<{
+          req: Request & { user: IAccessTokenClaims };
+        }>().req
+      : context
+          .switchToHttp()
+          .getRequest<Request & { user: IAccessTokenClaims }>();
   const claims = request.user;
 
   return {

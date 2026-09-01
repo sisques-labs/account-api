@@ -116,6 +116,31 @@ reasonable follow-up work once there's a concrete UI need for it.
 
 ---
 
+## GraphQL
+
+`transport/graphql/` mirrors the REST surface for both aggregates, split per
+the architecture skill's resolver convention:
+
+- `TenantQueriesResolver` — `tenantsFindByCriteria(input: TenantFindByCriteriaRequestDto)`
+  (guarded by `PlatformAdminGuard`, same restriction as `GET /tenants`; type-safe
+  Criteria pattern: `TenantQueryableField` + `tenantFilterableFields` registry +
+  `TenantFilterInput`/`TenantSortInput`) and
+  `tenantMembershipsFindByTenantId(input: TenantMembershipFindByTenantIdRequestDto)`.
+- `TenantMutationsResolver` — `tenantCreate`, `tenantUpdate`, `tenantDelete`
+  (all `@CurrentUser()` + `JwtAuthGuard`, same owner-only rules as the REST
+  handlers) and `tenantMemberAdd`. All four return the shared
+  `MutationResponseDto`.
+
+`TenantRoleEnum` is registered as a GraphQL enum (`transport/graphql/enums/tenant/tenant-registered-enums.graphql.ts`,
+alongside `TenantQueryableFieldEnum`) so `TenantAddMemberRequestDto.role` and
+`TenantMembershipResponseDto.role` are strongly typed in the schema, not free
+strings. No resolved fields yet — `Tenant.appId` and `TenantMembership.userId`/`tenantId`
+stay as raw FKs, same as the REST response DTOs; a `Tenant.app`/`TenantMembership.user`
+resolved field would need `IAppLookupPort`/`IUserLookupPort` to grow a real
+lookup method beyond their current `assertExists`/`findUserIdByEmail`.
+
+---
+
 ## Cross-context port
 
 | Port | Adapter | Dispatches | Used by |
@@ -147,6 +172,17 @@ login/refresh) — see `auth`'s README.
 | `POST` | `/api/v1/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
 | `GET` | `/api/v1/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
 
+### GraphQL
+
+| Operation | Auth | Description |
+|-----------|------|-------------|
+| `mutation tenantCreate` | JWT | Create a tenant; caller becomes owner. |
+| `mutation tenantUpdate` | JWT, owner | Update a tenant's `name`/`slug`. |
+| `mutation tenantDelete` | JWT, owner | Hard-delete a tenant and its memberships. |
+| `mutation tenantMemberAdd` | JWT | Add an existing user as a member, by email. |
+| `query tenantsFindByCriteria` | JWT, platform admin | List tenants, filterable/sortable via `TenantFilterInput`/`TenantSortInput`, paginated. |
+| `query tenantMembershipsFindByTenantId` | JWT | List a tenant's members. |
+
 ### Commands & queries
 
 | Class | Description |
@@ -170,10 +206,10 @@ login/refresh) — see `auth`'s README.
 ## Testing
 
 ```bash
-pnpm test src/contexts/tenancy         # unit
+pnpm test src/contexts/tenancy         # unit (REST + GraphQL layers)
 pnpm test src/contexts/app             # unit
 pnpm test:integration                  # App/Tenant/TenantMembership repos, real Postgres
-pnpm test:e2e                          # full create-app/create-tenant/add-member flow
+pnpm test:e2e                          # full create-app/create-tenant/add-member flow, REST and GraphQL
 ```
 
 Same layering note as `user`/`auth`: TypeORM mappers/repositories are

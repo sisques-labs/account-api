@@ -48,6 +48,24 @@ lands.
 
 ---
 
+## GraphQL
+
+`transport/graphql/` mirrors the REST surface, split per the architecture
+skill's resolver convention:
+
+- `AppQueriesResolver` — `appFindById(input: AppFindByIdRequestDto)`,
+  `appsFindByCriteria(input: AppFindByCriteriaRequestDto)` (type-safe Criteria
+  pattern: `AppQueryableField` + `appFilterableFields` registry +
+  `AppFilterInput`/`AppSortInput`, validated by `FilterValidationPipe`).
+- `AppMutationsResolver` — `appCreate(input: AppCreateRequestDto)`, guarded by
+  `JwtAuthGuard`, returns the shared `MutationResponseDto`.
+
+No resolved fields (App has no cross-context relations of its own) and no
+update/delete mutations — same prepared-but-not-exposed state as the REST
+side (see "Update / delete" above).
+
+---
+
 ## Cross-context port
 
 `app` exposes `AppFindByIdQuery`, consumed cross-context by `tenancy`'s
@@ -70,6 +88,14 @@ on tenant creation — see `tenancy`'s README, "Cross-context port".
 | `POST` | `/api/v1/apps` | JWT | Register a new app. 201, or 409 (slug taken). |
 | `GET` | `/api/v1/apps` | JWT | List apps, filterable by `id`/`slug`/`name`, paginated. 200. |
 
+### GraphQL
+
+| Operation | Auth | Description |
+|-----------|------|-------------|
+| `mutation appCreate` | JWT | Register a new app. Returns `MutationResponseDto`. |
+| `query appFindById` | — | Find a single app by id. |
+| `query appsFindByCriteria` | — | List apps, filterable/sortable via `AppFilterInput`/`AppSortInput`, paginated. |
+
 ### Commands & queries
 
 | Class | Description |
@@ -89,9 +115,9 @@ on tenant creation — see `tenancy`'s README, "Cross-context port".
 ## Testing
 
 ```bash
-pnpm test src/contexts/app             # unit
+pnpm test src/contexts/app             # unit (REST + GraphQL layers)
 pnpm test:integration                  # App repo, real Postgres
-pnpm test:e2e                          # create-app / list-apps HTTP flow
+pnpm test:e2e                          # create-app / list-apps over HTTP and GraphQL
 ```
 
 Same layering note as `tenancy`/`user`/`auth`: the TypeORM mapper/repository

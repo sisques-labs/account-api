@@ -28,6 +28,11 @@ import { TenantTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/pe
 import { TenantTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-typeorm-write.repository';
 import { TenantMembershipTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-read.repository';
 import { TenantMembershipTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-write.repository';
+import '@contexts/tenancy/transport/graphql/enums/tenant/tenant-registered-enums.graphql';
+import { TenantMembershipGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant/tenant.mapper';
+import { TenantMutationsResolver } from '@contexts/tenancy/transport/graphql/resolvers/tenant/tenant-mutations.resolver';
+import { TenantQueriesResolver } from '@contexts/tenancy/transport/graphql/resolvers/tenant/tenant-queries.resolver';
 import { TenantsController } from '@contexts/tenancy/transport/rest/controllers/tenants.controller';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
 import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
@@ -87,6 +92,16 @@ const TRANSPORT_MAPPERS = [TenantMembershipRestMapper, TenantRestMapper];
 
 const TRANSPORT_REST_CONTROLLERS = [TenantsController];
 
+const TRANSPORT_GRAPHQL_MAPPERS = [
+  TenantGraphQLMapper,
+  TenantMembershipGraphQLMapper,
+];
+
+const TRANSPORT_GRAPHQL_RESOLVERS = [
+  TenantQueriesResolver,
+  TenantMutationsResolver,
+];
+
 @Module({
   imports: [
     CqrsModule,
@@ -104,6 +119,8 @@ const TRANSPORT_REST_CONTROLLERS = [TenantsController];
     ...INFRASTRUCTURE_REPOSITORIES,
     ...INFRASTRUCTURE_ADAPTERS,
     ...TRANSPORT_MAPPERS,
+    ...TRANSPORT_GRAPHQL_MAPPERS,
+    ...TRANSPORT_GRAPHQL_RESOLVERS,
   ],
 })
 export class TenancyModule {}
