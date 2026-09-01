@@ -10,6 +10,10 @@ import { AppEntity } from '@contexts/app/infrastructure/persistence/typeorm/enti
 import { AppTypeOrmMapper } from '@contexts/app/infrastructure/persistence/typeorm/mappers/app-typeorm.mapper';
 import { AppTypeOrmReadRepository } from '@contexts/app/infrastructure/persistence/typeorm/repositories/app-typeorm-read.repository';
 import { AppTypeOrmWriteRepository } from '@contexts/app/infrastructure/persistence/typeorm/repositories/app-typeorm-write.repository';
+import '@contexts/app/transport/graphql/enums/app-registered-enums.graphql';
+import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app.mapper';
+import { AppMutationsResolver } from '@contexts/app/transport/graphql/resolvers/app-mutations.resolver';
+import { AppQueriesResolver } from '@contexts/app/transport/graphql/resolvers/app-queries.resolver';
 import { AppsController } from '@contexts/app/transport/rest/controllers/apps.controller';
 import { AppRestMapper } from '@contexts/app/transport/rest/mappers/app/app.mapper';
 import { Module } from '@nestjs/common';
@@ -40,6 +44,10 @@ const TRANSPORT_MAPPERS = [AppRestMapper];
 
 const TRANSPORT_REST_CONTROLLERS = [AppsController];
 
+const TRANSPORT_GRAPHQL_MAPPERS = [AppGraphQLMapper];
+
+const TRANSPORT_GRAPHQL_RESOLVERS = [AppQueriesResolver, AppMutationsResolver];
+
 @Module({
   imports: [
     CqrsModule,
@@ -56,6 +64,8 @@ const TRANSPORT_REST_CONTROLLERS = [AppsController];
     ...INFRASTRUCTURE_MAPPERS,
     ...INFRASTRUCTURE_REPOSITORIES,
     ...TRANSPORT_MAPPERS,
+    ...TRANSPORT_GRAPHQL_MAPPERS,
+    ...TRANSPORT_GRAPHQL_RESOLVERS,
   ],
 })
 export class AppModule {}
