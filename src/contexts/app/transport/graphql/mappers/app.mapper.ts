@@ -2,7 +2,7 @@ import { AppViewModel } from '@contexts/app/domain/view-models/app.view-model';
 import {
   AppResponseDto,
   PaginatedAppResultDto,
-} from '@contexts/app/transport/graphql/dtos/responses/app/app.response.dto';
+} from '@contexts/app/transport/graphql/dtos/responses/app.response.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { PaginatedResult } from '@sisques-labs/nestjs-kit';
 

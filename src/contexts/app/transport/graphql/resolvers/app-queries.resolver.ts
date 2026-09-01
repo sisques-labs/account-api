@@ -1,13 +1,13 @@
 import { AppFindByCriteriaQuery } from '@contexts/app/application/queries/app-find-by-criteria/app-find-by-criteria.query';
 import { AppFindByIdQuery } from '@contexts/app/application/queries/app-find-by-id/app-find-by-id.query';
 import { appFilterableFields } from '@contexts/app/transport/graphql/registries/app-filterable-fields.registry';
-import { AppFindByIdRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app/app-find-by-id.request.dto';
-import { AppFindByCriteriaRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app/app-find-by-criteria.request.dto';
+import { AppFindByIdRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app-find-by-id.request.dto';
+import { AppFindByCriteriaRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app-find-by-criteria.request.dto';
 import {
   AppResponseDto,
   PaginatedAppResultDto,
-} from '@contexts/app/transport/graphql/dtos/responses/app/app.response.dto';
-import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app/app.mapper';
+} from '@contexts/app/transport/graphql/dtos/responses/app.response.dto';
+import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app.mapper';
 import { Logger } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { Args, Query, Resolver } from '@nestjs/graphql';

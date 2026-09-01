@@ -3,8 +3,8 @@ import { BaseFindByCriteriaInput } from '@sisques-labs/nestjs-kit/graphql';
 import { Type } from 'class-transformer';
 import { IsArray, IsOptional, ValidateNested } from 'class-validator';
 
-import { AppFilterInput } from '@contexts/app/transport/graphql/dtos/requests/app/app-filter.input';
-import { AppSortInput } from '@contexts/app/transport/graphql/dtos/requests/app/app-sort.input';
+import { AppFilterInput } from '@contexts/app/transport/graphql/dtos/requests/app-filter.input';
+import { AppSortInput } from '@contexts/app/transport/graphql/dtos/requests/app-sort.input';
 
 @InputType('AppFindByCriteriaRequestDto')
 export class AppFindByCriteriaRequestDto extends BaseFindByCriteriaInput {

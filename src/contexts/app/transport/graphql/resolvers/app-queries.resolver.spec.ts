@@ -1,9 +1,9 @@
 import { AppFindByCriteriaQuery } from '@contexts/app/application/queries/app-find-by-criteria/app-find-by-criteria.query';
 import { AppFindByIdQuery } from '@contexts/app/application/queries/app-find-by-id/app-find-by-id.query';
 import { AppViewModel } from '@contexts/app/domain/view-models/app.view-model';
-import { AppFindByIdRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app/app-find-by-id.request.dto';
-import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app/app.mapper';
-import { AppQueriesResolver } from '@contexts/app/transport/graphql/resolvers/app/app-queries.resolver';
+import { AppFindByIdRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app-find-by-id.request.dto';
+import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app.mapper';
+import { AppQueriesResolver } from '@contexts/app/transport/graphql/resolvers/app-queries.resolver';
 import { QueryBus } from '@nestjs/cqrs';
 import { PaginatedResult } from '@sisques-labs/nestjs-kit';
 

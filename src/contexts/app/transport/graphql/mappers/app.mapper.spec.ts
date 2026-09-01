@@ -1,5 +1,5 @@
 import { AppViewModel } from '@contexts/app/domain/view-models/app.view-model';
-import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app/app.mapper';
+import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app.mapper';
 import { PaginatedResult } from '@sisques-labs/nestjs-kit';
 
 describe('AppGraphQLMapper', () => {

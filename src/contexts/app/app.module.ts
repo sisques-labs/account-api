@@ -10,10 +10,10 @@ import { AppEntity } from '@contexts/app/infrastructure/persistence/typeorm/enti
 import { AppTypeOrmMapper } from '@contexts/app/infrastructure/persistence/typeorm/mappers/app-typeorm.mapper';
 import { AppTypeOrmReadRepository } from '@contexts/app/infrastructure/persistence/typeorm/repositories/app-typeorm-read.repository';
 import { AppTypeOrmWriteRepository } from '@contexts/app/infrastructure/persistence/typeorm/repositories/app-typeorm-write.repository';
-import '@contexts/app/transport/graphql/enums/app/app-registered-enums.graphql';
-import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app/app.mapper';
-import { AppMutationsResolver } from '@contexts/app/transport/graphql/resolvers/app/app-mutations.resolver';
-import { AppQueriesResolver } from '@contexts/app/transport/graphql/resolvers/app/app-queries.resolver';
+import '@contexts/app/transport/graphql/enums/app-registered-enums.graphql';
+import { AppGraphQLMapper } from '@contexts/app/transport/graphql/mappers/app.mapper';
+import { AppMutationsResolver } from '@contexts/app/transport/graphql/resolvers/app-mutations.resolver';
+import { AppQueriesResolver } from '@contexts/app/transport/graphql/resolvers/app-queries.resolver';
 import { AppsController } from '@contexts/app/transport/rest/controllers/apps.controller';
 import { AppRestMapper } from '@contexts/app/transport/rest/mappers/app/app.mapper';
 import { Module } from '@nestjs/common';

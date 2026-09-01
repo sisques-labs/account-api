@@ -1,6 +1,6 @@
 import { FilterFieldRegistry } from '@sisques-labs/nestjs-kit';
 
-import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app/app-queryable-field.enum';
+import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app-queryable-field.enum';
 
 /**
  * Expected `Filter.value` shape per {@link AppQueryableField}, consumed by

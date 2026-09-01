@@ -1,5 +1,5 @@
 import { CreateAppCommand } from '@contexts/app/application/commands/create-app/create-app.command';
-import { AppMutationsResolver } from '@contexts/app/transport/graphql/resolvers/app/app-mutations.resolver';
+import { AppMutationsResolver } from '@contexts/app/transport/graphql/resolvers/app-mutations.resolver';
 import { CommandBus } from '@nestjs/cqrs';
 import { MutationResponseGraphQLMapper } from '@sisques-labs/nestjs-kit/graphql';
 

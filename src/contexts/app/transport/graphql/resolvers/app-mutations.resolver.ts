@@ -1,5 +1,5 @@
 import { CreateAppCommand } from '@contexts/app/application/commands/create-app/create-app.command';
-import { AppCreateRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app/app-create.request.dto';
+import { AppCreateRequestDto } from '@contexts/app/transport/graphql/dtos/requests/app-create.request.dto';
 import { JwtAuthGuard } from '@core/security/guards/jwt-auth.guard';
 import { Logger, UseGuards } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';

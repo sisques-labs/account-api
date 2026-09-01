@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app/app-queryable-field.enum';
+import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app-queryable-field.enum';
 
 const registeredAppEnums = [
   {

@@ -1,7 +1,7 @@
 import { FilterOperator } from '@sisques-labs/nestjs-kit';
 import { FilterValidationPipe } from '@sisques-labs/nestjs-kit/graphql';
 
-import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app/app-queryable-field.enum';
+import { AppQueryableField } from '@contexts/app/transport/graphql/enums/app-queryable-field.enum';
 import { appFilterableFields } from '@contexts/app/transport/graphql/registries/app-filterable-fields.registry';
 
 describe('appFilterableFields', () => {
