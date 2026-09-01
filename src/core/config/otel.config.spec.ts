@@ -45,7 +45,7 @@ describe('otelConfig', () => {
 
     delete process.env.SERVICE_NAME;
 
-    expect(otelConfig().serviceName).toBe('nestjs-template');
+    expect(otelConfig().serviceName).toBe('account-api');
   });
 
   it('throws for an out-of-range traces sample ratio', () => {

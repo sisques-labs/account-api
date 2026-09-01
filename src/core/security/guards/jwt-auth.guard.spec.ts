@@ -10,9 +10,20 @@ describe('JwtAuthGuard', () => {
   const buildContext = (authorization?: string): ExecutionContext => {
     const request = { headers: { authorization } };
     return {
+      getType: () => 'http',
       switchToHttp: () => ({
         getRequest: () => request,
       }),
+    } as unknown as ExecutionContext;
+  };
+
+  const buildGraphQLContext = (authorization?: string): ExecutionContext => {
+    const request = { headers: { authorization } };
+    return {
+      getType: () => 'graphql',
+      getArgs: () => [{}, {}, { req: request }, {}],
+      getClass: () => JwtAuthGuard,
+      getHandler: () => (): void => undefined,
     } as unknown as ExecutionContext;
   };
 
@@ -60,5 +71,24 @@ describe('JwtAuthGuard', () => {
       user: unknown;
     };
     expect(request.user).toEqual(claims);
+  });
+
+  it('should read the request from the GraphQL context and allow access', () => {
+    const claims = {
+      sub: 'user-1',
+      email: 'user@example.com',
+      platformAdmin: false,
+      tenants: [],
+    };
+    jwtService.verify.mockReturnValue(claims);
+    const context = buildGraphQLContext('Bearer good-token');
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
+
+  it('should throw UnauthorizedException in GraphQL context when no Authorization header is present', () => {
+    expect(() => guard.canActivate(buildGraphQLContext())).toThrow(
+      UnauthorizedException,
+    );
   });
 });

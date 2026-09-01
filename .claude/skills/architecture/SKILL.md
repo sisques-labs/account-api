@@ -63,16 +63,32 @@ src/contexts/{context}/
 │   ├── strategies/        {name}.strategy.ts
 │   └── decorators/        {name}.decorator.ts
 ├── transport/
-│   ├── graphql/
-│   │   ├── resolvers/     {name}.resolver.ts         — CommandBus/QueryBus only
-│   │   ├── dtos/          {name}.input.ts
-│   │   │                  {name}-filter.input.ts     — createFilterInput({Name}QueryableField, '{Name}')
-│   │   │                  {name}-sort.input.ts        — createSortInput({Name}QueryableField, '{Name}')
-│   │   ├── objects/       {name}.object.ts
-│   │   ├── mappers/       {name}.mapper.ts
-│   │   ├── enums/         {name}-registered-enums.graphql.ts
-│   │   │                  {name}-queryable-field.enum.ts  — whitelist for findByCriteria
-│   │   └── registries/    {name}-filterable-fields.registry.ts — FilterFieldRegistry, +.spec.ts
+│   ├── graphql/                                       — see "Entity Subfolders" below: the {name}/ level
+│   │   │                                                 shown here applies only when the context exposes
+│   │   │                                                 more than one entity over GraphQL; a single-entity
+│   │   │                                                 context flattens it away (files stay {name}-prefixed)
+│   │   ├── resolvers/{name}/
+│   │   │   ├── {name}-queries.resolver.ts            — @Query only; QueryBus + {Name}GraphQLMapper
+│   │   │   ├── {name}-mutations.resolver.ts          — @Mutation only; CommandBus + MutationResponseGraphQLMapper, @UseGuards(JwtAuthGuard)
+│   │   │   ├── {name}-resolved-fields.resolver.ts    — @ResolveField for same-context nested fields
+│   │   │   └── {name}-{other}-resolved-field.resolver.ts — one per cross-context field; injects that context's Port
+│   │   ├── dtos/
+│   │   │   ├── requests/{name}/
+│   │   │   │   ├── {name}-create.request.dto.ts       — @InputType('{Name}CreateRequestDto')
+│   │   │   │   ├── {name}-update.request.dto.ts
+│   │   │   │   ├── {name}-delete.request.dto.ts
+│   │   │   │   ├── {name}-find-by-id.request.dto.ts
+│   │   │   │   ├── {name}-find-by-criteria.request.dto.ts — extends BaseFindByCriteriaInput; declares filters/sorts
+│   │   │   │   ├── {name}-filter.input.ts             — createFilterInput({Name}QueryableField, '{Name}')
+│   │   │   │   └── {name}-sort.input.ts               — createSortInput({Name}QueryableField, '{Name}')
+│   │   │   └── responses/{name}/
+│   │   │       └── {name}.response.dto.ts             — {Name}ResponseDto + Paginated{Name}ResultDto (extends BasePaginatedResultDto) + any {Name}Linked{Other}ResponseDto
+│   │   ├── mappers/{name}/
+│   │   │   └── {name}.mapper.ts                       — {Name}GraphQLMapper: ViewModel → ResponseDto, + paginated/linked variants
+│   │   ├── enums/{name}/
+│   │   │   ├── {name}-registered-enums.graphql.ts
+│   │   │   └── {name}-queryable-field.enum.ts         — whitelist for findByCriteria
+│   │   └── registries/    {name}-filterable-fields.registry.ts — FilterFieldRegistry, +.spec.ts (always flat — one registry file per entity is already unambiguous by filename)
 │   ├── rest/
 │   │   ├── {name}.controller.ts
 │   │   └── dtos/          {name}.dto.ts
@@ -83,6 +99,51 @@ src/contexts/{context}/
 ```
 
 Drop the `graphql/`, `rest/`, or `mcp/` subtree entirely for a context that doesn't need that transport — none of the three is mandatory per context.
+
+## Entity Subfolders (`{name}/`) — only when a context has more than one entity
+
+The `{name}/` level under `transport/graphql/{resolvers,dtos/requests,dtos/responses,mappers,enums}/`
+exists to disambiguate **when a bounded context exposes more than one entity**
+over GraphQL (e.g. `tenancy` has `Tenant` and `TenantMembership` —
+`resolvers/tenant/`, `mappers/tenant-membership/`, etc.). A context with a
+single entity (e.g. `app`, which only has `App`) drops that level entirely —
+files go straight in `resolvers/`, `dtos/requests/`, `dtos/responses/`,
+`mappers/`, `enums/` — since every filename is already `{name}`-prefixed
+(`app-queries.resolver.ts`, `app.mapper.ts`, `app.response.dto.ts`, …) and a
+folder repeating the same single name adds nesting without disambiguating
+anything. `registries/` is the one exception: it never gets a `{name}/`
+level, single- or multi-entity, because `{name}-filterable-fields.registry.ts`
+is already unambiguous by filename alone.
+
+If a single-entity context later grows a second entity, promote it to the
+`{name}/` layout at that point — don't pre-emptively nest for entities that
+don't exist yet.
+
+## GraphQL Resolver Split (mandatory shape, every context that exposes GraphQL)
+
+Never put queries, mutations, and resolved fields in one `{name}.resolver.ts`.
+Split by responsibility, one resolver class per file, all under
+`transport/graphql/resolvers/{name}/`:
+
+| Resolver | Bus | Notes |
+|----------|-----|-------|
+| `{name}-queries.resolver.ts` (`{Name}QueriesResolver`) | `QueryBus` | `@Resolver(() => {Name}ResponseDto)`. One `@Query` per read use case (`{name}FindById`, `{name}sFindByCriteria` with `FilterValidationPipe`). Injects `{Name}GraphQLMapper` to convert the ViewModel result to the response DTO. |
+| `{name}-mutations.resolver.ts` (`{Name}MutationsResolver`) | `CommandBus` | `@Resolver()` + `@UseGuards(JwtAuthGuard)` (once auth exists). One `@Mutation(() => MutationResponseDto)` per write use case, returning `MutationResponseGraphQLMapper.toResponseDto({ success, message, id })`. |
+| `{name}-resolved-fields.resolver.ts` (`{Name}ResolvedFieldsResolver`) | — | `@Resolver(() => {Name}ResponseDto)`. `@ResolveField` for nested data resolved from *this* context (e.g. a same-context child ViewModel). |
+| `{name}-{other}-resolved-field.resolver.ts` (`{Name}{Other}ResolvedFieldResolver`) | — | One per **cross-context** resolved field. Injects that context's port (`application/ports/{other}.port.ts`, `@Inject({OTHER}_PORT)`) — never another context's bus directly. |
+
+This mirrors the cross-context boundary rule: a resolved field that reaches
+another bounded context does so through a port/adapter, exactly like an
+infrastructure adapter would, just triggered from a `@ResolveField` instead of
+a command/query handler.
+
+Response DTOs for one aggregate all live together in the single
+`dtos/responses/{name}/{name}.response.dto.ts` file: the main
+`{Name}ResponseDto`, `Paginated{Name}ResultDto extends BasePaginatedResultDto`,
+and any `{Name}Linked{Other}ResponseDto` used by a resolved field. Request DTOs
+instead get one file per use case under `dtos/requests/{name}/` (create,
+update, delete, find-by-id, find-by-criteria, filter, sort) so validation
+decorators for each mutation/query stay isolated.
 
 ## Decision Gates
 
@@ -104,7 +165,9 @@ fields. This is the pattern that prevents two recurring bugs: `findByCriteria`
 silently ignoring `criteria.filters` (pagination applied, filters dropped),
 and `filter.field` interpolated straight into SQL with zero validation.
 
-1. **Queryable field enum** — `transport/graphql/enums/{name}-queryable-field.enum.ts`:
+1. **Queryable field enum** — `transport/graphql/enums/{name}-queryable-field.enum.ts`
+   (nested under `enums/{name}/` instead when the context has more than one
+   entity — see "Entity Subfolders" above):
    a `{Name}QueryableField` enum whitelisting every scalar/FK field on that
    context's ViewModel that maps to a real column. Register it via
    `registerEnumType` as `{Name}QueryableFieldEnum` in the context's existing
@@ -119,7 +182,9 @@ and `filter.field` interpolated straight into SQL with zero validation.
    duplicated string list; the domain enum is the single source of truth.
    Co-locate a `.spec.ts` asserting every enum value has a registry entry,
    plus enum-membership and whitelist-rejection cases.
-3. **Filter/sort inputs** — `transport/graphql/dtos/requests/{name}-filter.input.ts` / `-sort.input.ts`:
+3. **Filter/sort inputs** — `transport/graphql/dtos/requests/{name}-filter.input.ts` / `-sort.input.ts`
+   (nested under `dtos/requests/{name}/` instead when the context has more
+   than one entity):
    ```ts
    @InputType('{Name}FilterInput')
    export class {Name}FilterInput extends createFilterInput({Name}QueryableField, '{Name}') {}
@@ -158,6 +223,12 @@ and `filter.field` interpolated straight into SQL with zero validation.
 | Filterable-fields registry | `{name}-filterable-fields.registry.ts` (+ `.spec.ts`) | `order-filterable-fields.registry.ts` |
 | Filter input | `{name}-filter.input.ts`, class `{Name}FilterInput` | `order-filter.input.ts` |
 | Sort input | `{name}-sort.input.ts`, class `{Name}SortInput` | `order-sort.input.ts` |
+| GraphQL queries resolver | `{name}-queries.resolver.ts`, class `{Name}QueriesResolver` | `order-queries.resolver.ts` |
+| GraphQL mutations resolver | `{name}-mutations.resolver.ts`, class `{Name}MutationsResolver` | `order-mutations.resolver.ts` |
+| GraphQL resolved-field resolver | `{name}-resolved-fields.resolver.ts` (same-context) or `{name}-{other}-resolved-field.resolver.ts` (cross-context) | `order-customer-resolved-field.resolver.ts` |
+| GraphQL mapper | `{name}.mapper.ts`, class `{Name}GraphQLMapper` | `order.mapper.ts` |
+| GraphQL response DTO | `{name}.response.dto.ts`, class `{Name}ResponseDto` | `order.response.dto.ts` |
+| GraphQL request DTO | `{name}-{create\|update\|delete\|find-by-id\|find-by-criteria}.request.dto.ts` | `order-create.request.dto.ts` |
 
 ## References
 
@@ -169,12 +240,14 @@ and `filter.field` interpolated straight into SQL with zero validation.
   `src/core/observability/` — every CommandBus/QueryBus dispatch is
   auto-instrumented, no per-handler wiring needed.
 - `.claude/skills/architecture/assets/aggregate-template.ts.template` — aggregate starter
-- `src/contexts/user/README.md`, `src/contexts/auth/README.md` and
-  `src/contexts/tenancy/README.md` — the first bounded contexts added to
-  this service (REST-only, no GraphQL/MCP transport), and the canonical
-  example of the cross-context port/adapter pattern in practice (each
-  depends on the others via `application/ports/` +
-  `infrastructure/adapters/`, dispatching through `CommandBus`/`QueryBus` —
-  never a direct domain/application import). `user`'s README also documents
+- `src/contexts/user/README.md`, `src/contexts/auth/README.md`,
+  `src/contexts/app/README.md` and `src/contexts/tenancy/README.md` — the
+  first bounded contexts added to this service, and the canonical example of
+  the cross-context port/adapter pattern in practice (each depends on the
+  others via `application/ports/` + `infrastructure/adapters/`, dispatching
+  through `CommandBus`/`QueryBus` — never a direct domain/application
+  import). `user`/`auth` are REST-only so far; `app`/`tenancy` also expose
+  GraphQL (`transport/graphql/`) — the reference implementation for the
+  "GraphQL Resolver Split" pattern above. `user`'s README also documents
   the "one context, or two, or three?" decision process for the next
   context that's tempted to merge two concerns.
