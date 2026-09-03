@@ -20,29 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Keycloak (self-hosted identity provider, MVP adapter) — lives HERE, in
-  # account-api's own compose file, not in local-dev-stack. Rationale (see
-  # README "Keycloak — where it runs"): local-dev-stack exists to amortize
-  # infra shared across MULTIPLE services (Postgres/Kafka/Redis/OTel);
-  # Keycloak has exactly one consumer (account-api itself — the architecture
-  # doc's one exception to "apps never talk to Keycloak directly"), so it's
-  # kept as a private implementation detail of this service instead, the
-  # same way the template already keeps its own otel-collector/Jaeger here
-  # alongside local-dev-stack's shared Postgres.
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    command: ['start-dev', '--import-realm']
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-    ports:
-      # 8081 collides with local-dev-stack's mongo-express default port —
-      # use 8083 instead (8082 is reserved for docker-compose.test.yml's
-      # keycloak-test).
-      - '8083:8080' # Admin console + API — http://localhost:8083
-    volumes:
-      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
-
   # Local OpenTelemetry stack — optional, for viewing traces/metrics in dev.
   # Point the app at it with OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
   jaeger:
