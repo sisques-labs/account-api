@@ -5,10 +5,10 @@ and future apps). It owns:
 
 - **User** — the platform identity record (`id`, `email`, `displayName`,
   `platformAdmin`).
-- **Auth** — registration/login backed by Keycloak (self-hosted), and
-  Sisques Account's own signed JWT (access token) + opaque refresh token
-  (its own `Session` aggregate). Apps never talk to Keycloak directly —
-  only `account-api` does.
+- **Auth** — registration/login backed by Keycloak (self-hosted, shared via
+  `local-dev-stack`), and Sisques Account's own signed JWT (access token) +
+  opaque refresh token (its own `Session` aggregate). Apps never talk to
+  Keycloak directly — only `account-api` does.
 - **Tenancy** — the platform-level mechanics of a tenant (name, members,
   roles). What each role *means* inside a given app (e.g. Gardenia's
   "member" can water but not delete plants) is that app's own concern, not
@@ -29,17 +29,20 @@ aggregates, and public API.
 
 - Node (see `.nvmrc`) + `pnpm` (see `packageManager` in `package.json`)
 - Docker + Docker Compose v2
-- [`local-dev-stack`](../local-dev-stack) running, for the shared Postgres —
-  see below
+- [`local-dev-stack`](../local-dev-stack) running, for the shared Postgres
+  and Keycloak — see below
 
 ## Running locally
 
-**1. Shared Postgres (`local-dev-stack`)**
+**1. Shared Postgres + Keycloak (`local-dev-stack`)**
 
-account-api uses `local-dev-stack`'s shared Postgres instance rather than
-spinning up its own — see "Keycloak — where it runs" below for why Keycloak
-is the one exception. `account_db` is already registered in that repo's
-`docker/postgres/init-db.sh`. Start (or reuse) the stack:
+account-api uses `local-dev-stack`'s shared Postgres instance and shared
+Keycloak instance rather than spinning up its own — see "Keycloak — where
+it runs" below for why. `account_db` is already registered in that repo's
+`docker/postgres/init-db.sh`, and the `sisques-account` realm + `account-api`
+client are registered as
+`local-dev-stack/docker/keycloak/realms/account-api-realm.json`. Start (or
+reuse) the stack:
 
 ```bash
 cd ../local-dev-stack
@@ -54,26 +57,29 @@ empty volume) — create it by hand instead:
 docker compose exec postgres psql -U devuser -d postgres -c "CREATE DATABASE account_db;"
 ```
 
-**2. Keycloak (this repo's own `docker-compose.yml`)**
+Similarly, if the stack was already running from before the
+`account-api-realm.json` file was added, re-run the import job by hand
+instead of waiting for a fresh boot:
 
 ```bash
-cd ../../account/account-api
-docker compose up -d keycloak
+docker compose up -d keycloak-realm-import
 ```
 
-Realm `sisques-account` + client `account-api` (service account with
-`manage-users`/`view-users`, plus direct-grant login) are auto-imported from
-`docker/keycloak/realm-export.json` on first boot. Admin console at
-`http://localhost:8083` (`admin` / `admin`, local dev only) — 8081 is taken
-by `local-dev-stack`'s Mongo Express, 8082 is reserved for
-`docker-compose.test.yml`'s `keycloak-test`.
+Keycloak admin console at `http://localhost:8084` (`admin` / `admin`, local
+dev only — see `local-dev-stack`'s README "Keycloak" section). The service
+account (`manage-users`/`view-users`/`query-users` on `realm-management`)
+isn't part of the imported realm JSON (that combination crashes Keycloak's
+import on this version — see `local-dev-stack`'s README); grant those role
+mappings once by hand in the admin console: Users →
+`service-account-account-api` → Role mapping → Assign role → filter by
+clients → `realm-management`.
 
-**3. The app**
+**2. The app**
 
 ```bash
 pnpm install
-cp .env.example .env   # defaults already point at local-dev-stack + the
-                        # Keycloak container above — see .env.example
+cp .env.example .env   # defaults already point at local-dev-stack's shared
+                        # Postgres and Keycloak — see .env.example
 pnpm dev
 ```
 
@@ -83,16 +89,17 @@ Migrations run automatically on boot (`DATABASE_MIGRATIONS_RUN` defaults to
 
 ### Keycloak — where it runs
 
-Decision: Keycloak lives in **this repo's `docker-compose.yml`**, not in
-`local-dev-stack`. `local-dev-stack` exists to amortize infrastructure
-*shared across multiple services* (Postgres, Kafka, Redis, OTel); Keycloak
-has exactly one consumer — `account-api` itself is the architecture doc's one
-explicit exception to "apps never talk to Keycloak directly" (it *is* the
-adapter boundary). Keeping it here mirrors how this template already keeps
-its own otel-collector/Jaeger alongside `local-dev-stack`'s shared Postgres.
-Postgres, on the other hand, genuinely is shared platform-wide state (every
-app in the ecosystem will eventually have a database here), so it uses
-`local-dev-stack` as designed.
+Decision: Keycloak lives in **`local-dev-stack`**, not in this repo's own
+`docker-compose.yml`. It used to be kept here on the reasoning that it had
+exactly one consumer (`account-api` is the architecture doc's one explicit
+exception to "apps never talk to Keycloak directly" — it *is* the adapter
+boundary), mirroring how this template keeps its own otel-collector/Jaeger
+alongside `local-dev-stack`'s shared Postgres. That's no longer true: more
+than one service now needs Keycloak, so it's centralized in
+`local-dev-stack` the same way Postgres already was, with each service
+registering its own realm/client under
+`local-dev-stack/docker/keycloak/realms/` (this repo's is
+`account-api-realm.json`).
 
 ### Running tests
 
@@ -106,8 +113,13 @@ pnpm test:db:down
 
 `docker-compose.test.yml` provisions an isolated `keycloak-test` (same
 `realm-export.json`, port 8082) purely so e2e specs can exercise the real
-`KeycloakIdentityProviderAdapter` for register/login — separate from the dev
-Keycloak on 8083 so both can run at once.
+`KeycloakIdentityProviderAdapter` for register/login — separate from the
+shared dev Keycloak on 8084 (`local-dev-stack`) so both can run at once.
+This test-only container still uses Keycloak's own `--import-realm` flag
+(see `docker-compose.test.yml` / `.github/workflows/ci.yml`) rather than
+the REST-API-based import `local-dev-stack` uses for dev — it hasn't hit
+the startup crash `local-dev-stack`'s README documents, but if it ever
+does, apply the same fix there.
 
 ## Example flow
 

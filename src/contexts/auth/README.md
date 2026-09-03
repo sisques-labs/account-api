@@ -193,7 +193,7 @@ no second adapter is built now.
 | `JWT_EXPIRES_IN` | `15m` | Access token TTL |
 | `REFRESH_TOKEN_TTL_DAYS` | `30` | Opaque refresh token TTL |
 | `COOKIE_DOMAIN` | unset | `.sisqueslabs.com` in production once apps share the domain |
-| `KEYCLOAK_BASE_URL` | `http://localhost:8083` | |
+| `KEYCLOAK_BASE_URL` | `http://localhost:8084` | Shared Keycloak instance from `local-dev-stack` |
 | `KEYCLOAK_REALM` | `sisques-account` | |
 | `KEYCLOAK_CLIENT_ID` | `account-api` | Confidential client, service account + direct grants |
 | `KEYCLOAK_CLIENT_SECRET` | `local-dev-secret-change-me` | |
