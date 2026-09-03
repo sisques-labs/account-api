@@ -1,6 +1,10 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.1.1] - 2026-09-03
+
+### Chore
+- Remove account-api's own Keycloak, use local-dev-stack's shared instance (b54bb85)
 ## [0.1.0] - 2026-09-01
 
 ### Bug Fixes
