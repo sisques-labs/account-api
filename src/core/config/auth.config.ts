@@ -6,7 +6,7 @@ export const authConfig = registerAs('auth', () => ({
   refreshTokenTtlDays: parseInt(process.env.REFRESH_TOKEN_TTL_DAYS ?? '30', 10),
   cookieDomain: process.env.COOKIE_DOMAIN,
   keycloak: {
-    baseUrl: process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8083',
+    baseUrl: process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8084',
     realm: process.env.KEYCLOAK_REALM ?? 'sisques-account',
     clientId: process.env.KEYCLOAK_CLIENT_ID ?? 'account-api',
     clientSecret: process.env.KEYCLOAK_CLIENT_SECRET ?? '',
