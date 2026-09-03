@@ -1,93 +1,194 @@
-# NestJS Template
+# Sisques Account (`account-api`)
 
-Sisques Labs' base template for new NestJS services: **DDD + CQRS + Hexagonal**
-architecture, TypeORM/PostgreSQL, optional Kafka event forwarding, REST
-(Swagger) + GraphQL (Apollo) transports, structured logging
-(`@sisques-labs/nestjs-kit` + Winston), OpenTelemetry traces + metrics + logs, an MCP
-endpoint, health checks, and the CI/CD workflows this org uses in production —
-all wired and ready to clone into a new service.
+Identity + tenancy service for the Sisques Labs platform (Gardenia, Nexora,
+and future apps). It owns:
 
-It ships with **zero bounded contexts** (`src/contexts/`) on purpose: the
-cross-cutting infrastructure (`src/core/`, `src/support/`) is the whole point
-of this repo, and the first context your new service adds defines the pattern
-every subsequent one follows (see the `architecture` skill in
-`.claude/skills/architecture/SKILL.md`).
+- **User** — the platform identity record (`id`, `email`, `displayName`,
+  `platformAdmin`).
+- **Auth** — registration/login backed by Keycloak (self-hosted, shared via
+  `local-dev-stack`), and Sisques Account's own signed JWT (access token) +
+  opaque refresh token (its own `Session` aggregate). Apps never talk to
+  Keycloak directly — only `account-api` does.
+- **Tenancy** — the platform-level mechanics of a tenant (name, members,
+  roles). What each role *means* inside a given app (e.g. Gardenia's
+  "member" can water but not delete plants) is that app's own concern, not
+  this service's.
 
-## Using this template for a new service
+See `/Users/javi/Documents/projects/sisques-labs/sisques-account-architecture.md`
+for the full design. This repo currently implements the **MVP**: `account-api`
+standalone, validated via tests/Postman — no `account-web` frontend yet, no
+email-based tenant invites.
 
-1. Create the new repo from this template (GitHub "Use this template", or
-   clone + re-init git).
-2. Rename the placeholder identifiers in one shot:
-   ```bash
-   scripts/rename-service.sh orders-api "Orders API"
-   pnpm install
-   ```
-   This rewrites every occurrence of `nestjs-template` / `NestJS Template` —
-   `package.json`, Docker image names in `.github/workflows/`, the Kafka
-   client id/topic prefix defaults, the default `OTEL_SERVICE_NAME`, the MCP
-   server name, docker-compose database names, and this README.
-3. Copy `.env.example` to `.env` and fill in real values.
-4. `pnpm test:db:up` to start a local Postgres, then `pnpm dev`.
-5. Add your first bounded context under `src/contexts/` and register its
-   module in `CONTEXT_MODULES` in `src/contexts/contexts.module.ts` — invoke
-   the `architecture` skill (or read `.claude/skills/architecture/SKILL.md`
-   directly) for the DDD+CQRS+Hexagonal layer rules and file naming.
+Built from [`sisques-labs/nestjs-template`](https://github.com/sisques-labs/nestjs-template)
+— DDD + CQRS + Hexagonal architecture. Three bounded contexts:
+`src/contexts/user/`, `src/contexts/auth/` and `src/contexts/tenancy/` — see
+each context's own `README.md` for the one/two/three-context decision,
+aggregates, and public API.
 
-## What's included
+## Prerequisites
 
-| Area | Where | Notes |
-|------|-------|-------|
-| Config + env validation | `src/core/config/` | Zod-validated env vars, CORS origin resolution |
-| Health checks | `src/core/health/` | `GET /api/health/live` (liveness), `GET /api/health/ready` (DB ping via `@nestjs/terminus`) |
-| Logging | `src/support/logging/` | Winston via `@sisques-labs/nestjs-kit`, JSON file + console transports, plus an OTel transport forwarding to the pipeline below |
-| Kafka event forwarding | `@sisques-labs/nestjs-kit/messaging` (wired in `src/core/core.module.ts`); `src/core/messaging/` keeps only the app-local, auto-generated aggregate→topic map | Opt-in (`KAFKA_ENABLED`), no-op when disabled |
-| OpenTelemetry | `src/telemetry.ts` (bootstrap), `src/core/observability/` (CQRS spans+metrics) | Traces + metrics + logs exported via OTLP to a collector; all disabled together until `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Auto-instruments HTTP/Express, GraphQL, Postgres, Kafka; CQRS command/query buses get spans + duration/count metrics; every Winston log line is forwarded too (`@opentelemetry/winston-transport`), correlated with the active span. `docker-compose.yml` ships a local collector + Jaeger UI (`:16686`) + Prometheus UI (`:9090`) — logs currently just land in the collector's own output (no local log backend wired up yet; swap the `logs` exporter in `docker/otel-collector-config.yaml` for Loki or similar when ready) |
-| MCP (Model Context Protocol) | `@sisques-labs/nestjs-kit/mcp` (wired in `src/core/core.module.ts`) | `POST /api/mcp`, per-request server, tool auto-discovery |
-| REST + GraphQL | `src/main.ts`, `src/core/core.module.ts` | Swagger at `/docs`, Apollo GraphQL at `/graphql` (drop whichever transport you don't need) |
-| Database | `src/database/`, TypeORM | Postgres only; migrations in `src/database/migrations/` |
-| CI/CD | `.github/workflows/` | `ci.yml` (lint+test+build+e2e+integration), `docker.yml` (PR smoke build), `release.yml` / `release-train.yml` (via `sisques-labs/workflows`) |
-| Dev workflow | `AGENTS.md`, `.claude/`, `openspec/` | Architecture skill, OpenSpec propose/apply/archive skills, project conventions in `openspec/config.yaml` |
+- Node (see `.nvmrc`) + `pnpm` (see `packageManager` in `package.json`)
+- Docker + Docker Compose v2
+- [`local-dev-stack`](../local-dev-stack) running, for the shared Postgres
+  and Keycloak — see below
 
-## Deliberately not included
+## Running locally
 
-These are common enough that they shouldn't be baked into every service, but
-specific enough that they'd bias the template toward one shape:
+**1. Shared Postgres + Keycloak (`local-dev-stack`)**
 
-- **Auth** (JWT/OAuth/sessions) and **multi-tenancy** — add what your service
-  actually needs; the MCP module's `contextBuilder` option (see
-  `McpModule.forRoot(...)` in `src/core/core.module.ts`, and `IMcpContextBuilder`
-  from `@sisques-labs/nestjs-kit/mcp`) and `src/core/filters/base-exception.filter.ts`
-  both have a documented extension point for when you do.
-- **Bounded contexts / business domain** — this is infrastructure only.
-- **MongoDB** — `@sisques-labs/nestjs-kit/mongodb` is available if a service
-  needs it alongside or instead of Postgres.
+account-api uses `local-dev-stack`'s shared Postgres instance and shared
+Keycloak instance rather than spinning up its own — see "Keycloak — where
+it runs" below for why. `account_db` is already registered in that repo's
+`docker/postgres/init-db.sh`, and the `sisques-account` realm + `account-api`
+client are registered as
+`local-dev-stack/docker/keycloak/realms/account-api-realm.json`. Start (or
+reuse) the stack:
 
-## Local development
+```bash
+cd ../local-dev-stack
+docker compose up -d
+```
+
+If the stack was already running from before this database was added,
+`init-db.sh` won't retroactively create it (it only runs on first boot of an
+empty volume) — create it by hand instead:
+
+```bash
+docker compose exec postgres psql -U devuser -d postgres -c "CREATE DATABASE account_db;"
+```
+
+Similarly, if the stack was already running from before the
+`account-api-realm.json` file was added, re-run the import job by hand
+instead of waiting for a fresh boot:
+
+```bash
+docker compose up -d keycloak-realm-import
+```
+
+Keycloak admin console at `http://localhost:8084` (`admin` / `admin`, local
+dev only — see `local-dev-stack`'s README "Keycloak" section). The service
+account (`manage-users`/`view-users`/`query-users` on `realm-management`)
+isn't part of the imported realm JSON (that combination crashes Keycloak's
+import on this version — see `local-dev-stack`'s README); grant those role
+mappings once by hand in the admin console: Users →
+`service-account-account-api` → Role mapping → Assign role → filter by
+clients → `realm-management`.
+
+**2. The app**
 
 ```bash
 pnpm install
-pnpm test:db:up      # Postgres on localhost:5434 (dev) — see docker-compose.yml
-pnpm dev              # nest start --watch
+cp .env.example .env   # defaults already point at local-dev-stack's shared
+                        # Postgres and Keycloak — see .env.example
+pnpm dev
 ```
 
-| Script | Description |
-|--------|-------------|
-| `pnpm dev` / `pnpm debug` / `pnpm prod` | Run the app (watch / debug / prod) |
-| `pnpm lint` | ESLint with `--fix` |
-| `pnpm test` / `pnpm test:cov` | Unit tests (Jest, co-located `*.spec.ts`) |
-| `pnpm test:e2e` | E2E tests against a real Postgres (`docker-compose.test.yml`) |
-| `pnpm test:integration` | Integration tests (persistence boundaries) |
-| `pnpm migration:generate` / `:run` / `:revert` | TypeORM migrations |
-| `pnpm gen:topics` / `:check` | Regenerate/verify the Kafka aggregate→module map |
+Migrations run automatically on boot (`DATABASE_MIGRATIONS_RUN` defaults to
+`true`) and create the 4 MVP tables: `app`, `user`, `tenant`,
+`tenant_membership`.
 
-Husky runs `pnpm gen:topics` + `lint-staged` on **pre-commit**, and
-`pnpm build && pnpm test:changed` on **pre-push**.
+### Keycloak — where it runs
 
-See `.env.example` for every environment variable this service reads.
+Decision: Keycloak lives in **`local-dev-stack`**, not in this repo's own
+`docker-compose.yml`. It used to be kept here on the reasoning that it had
+exactly one consumer (`account-api` is the architecture doc's one explicit
+exception to "apps never talk to Keycloak directly" — it *is* the adapter
+boundary), mirroring how this template keeps its own otel-collector/Jaeger
+alongside `local-dev-stack`'s shared Postgres. That's no longer true: more
+than one service now needs Keycloak, so it's centralized in
+`local-dev-stack` the same way Postgres already was, with each service
+registering its own realm/client under
+`local-dev-stack/docker/keycloak/realms/` (this repo's is
+`account-api-realm.json`).
+
+### Running tests
+
+```bash
+pnpm test              # unit (mocked, no infra needed)
+pnpm test:db:up        # postgres-test (5433) + keycloak-test (8082)
+pnpm test:integration  # persistence boundaries, real Postgres
+pnpm test:e2e          # full HTTP flows — real Postgres AND real Keycloak
+pnpm test:db:down
+```
+
+`docker-compose.test.yml` provisions an isolated `keycloak-test` (same
+`realm-export.json`, port 8082) purely so e2e specs can exercise the real
+`KeycloakIdentityProviderAdapter` for register/login — separate from the
+shared dev Keycloak on 8084 (`local-dev-stack`) so both can run at once.
+This test-only container still uses Keycloak's own `--import-realm` flag
+(see `docker-compose.test.yml` / `.github/workflows/ci.yml`) rather than
+the REST-API-based import `local-dev-stack` uses for dev — it hasn't hit
+the startup crash `local-dev-stack`'s README documents, but if it ever
+does, apply the same fix there.
+
+## Example flow
+
+Register → login → create an app → create a tenant (creator becomes owner)
+→ add an existing user as a member → list members → refresh.
+
+```bash
+BASE=http://localhost:3000/api/v1
+
+# 1. Register the tenant creator
+curl -s -X POST $BASE/auth/register -H 'Content-Type: application/json' -d '{
+  "email": "owner@example.com", "password": "Sup3rStrongPassw0rd!", "displayName": "Owner"
+}'
+
+# 2. Log in — returns { accessToken, refreshToken } (also set as cookies)
+curl -s -X POST $BASE/auth/login -H 'Content-Type: application/json' -d '{
+  "email": "owner@example.com", "password": "Sup3rStrongPassw0rd!"
+}'
+# -> save accessToken as $TOKEN, refreshToken as $REFRESH
+
+# 3. Register the app (bootstrapping plumbing — no MVP endpoint touches `app`
+#    otherwise, but `tenant.app_id` is a required FK)
+curl -s -X POST $BASE/apps -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{
+  "slug": "gardenia", "name": "Gardenia"
+}'
+# -> save appId as $APP_ID
+
+# 4. Create a tenant — $TOKEN's user becomes owner automatically
+curl -s -X POST $BASE/tenants -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{
+  "appId": "'$APP_ID'", "name": "My Garden"
+}'
+# -> save tenantId as $TENANT_ID (slug defaults to "my-garden" when omitted)
+
+# 5. Register a second user to add as a member
+curl -s -X POST $BASE/auth/register -H 'Content-Type: application/json' -d '{
+  "email": "member@example.com", "password": "Sup3rStrongPassw0rd!", "displayName": "Member"
+}'
+
+# 6. Add them as a member (by email — no invite flow in the MVP)
+curl -s -X POST $BASE/tenants/$TENANT_ID/members -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{
+  "email": "member@example.com", "role": "member"
+}'
+
+# 7. List members — owner + the new member
+curl -s $BASE/tenants/$TENANT_ID/members -H "Authorization: Bearer $TOKEN"
+
+# 8. Refresh — rotates the refresh token, issues a new access token
+curl -s -X POST $BASE/auth/refresh -H 'Content-Type: application/json' -d '{
+  "refreshToken": "'$REFRESH'"
+}'
+```
+
+Swagger UI at `http://localhost:3000/docs` documents every request/response
+shape.
+
+## What's included (cross-cutting)
+
+| Area | Where |
+|------|-------|
+| Config + env validation | `src/core/config/` (Zod), incl. `auth.config.ts` (JWT + Keycloak) |
+| Auth infrastructure | `src/core/security/` — `JwtAuthGuard`, `@CurrentUser()`, shared `JwtService`. Cross-cutting (used by every context), not owned by `auth` |
+| Health checks | `src/core/health/` — `GET /api/health/live`, `GET /api/health/ready` |
+| Logging / OTel / MCP / Kafka forwarding | Unchanged from the template — see `openspec/config.yaml` and each module's own comments |
+| Database | `src/database/migrations/` — the MVP tables (`app`, `user`, `tenant`, `tenant_membership`, `session`) |
 
 ## Architecture
 
-DDD + CQRS + Hexagonal (Screaming Architecture). Full rules, file naming, and
-the mandatory find-by-criteria filter pattern live in
-`.claude/skills/architecture/SKILL.md`; project-wide conventions (tech stack,
-testing layers, apply-time rules) live in `openspec/config.yaml`.
+DDD + CQRS + Hexagonal. Full rules in `.claude/skills/architecture/SKILL.md`;
+project-wide conventions in `openspec/config.yaml`. Context-specific design
+(aggregates, cross-context ports, public API) lives in
+`src/contexts/user/README.md`, `src/contexts/auth/README.md` and
+`src/contexts/tenancy/README.md`.

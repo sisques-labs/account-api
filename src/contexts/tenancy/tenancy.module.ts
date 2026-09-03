@@ -1,0 +1,126 @@
+import { AddTenantMemberCommandHandler } from '@contexts/tenancy/application/commands/add-tenant-member/add-tenant-member.handler';
+import { CreateTenantCommandHandler } from '@contexts/tenancy/application/commands/create-tenant/create-tenant.handler';
+import { DeleteTenantCommandHandler } from '@contexts/tenancy/application/commands/delete-tenant/delete-tenant.handler';
+import { UpdateTenantCommandHandler } from '@contexts/tenancy/application/commands/update-tenant/update-tenant.handler';
+import { APP_LOOKUP_PORT } from '@contexts/tenancy/application/ports/app-lookup.port';
+import { USER_LOOKUP_PORT } from '@contexts/tenancy/application/ports/user-lookup.port';
+import { TenantFindByCriteriaQueryHandler } from '@contexts/tenancy/application/queries/tenant-find-by-criteria/tenant-find-by-criteria.handler';
+import { TenantMembershipFindByTenantIdQueryHandler } from '@contexts/tenancy/application/queries/tenant-membership-find-by-tenant-id/tenant-membership-find-by-tenant-id.handler';
+import { TenantMembershipFindByUserIdQueryHandler } from '@contexts/tenancy/application/queries/tenant-membership-find-by-user-id/tenant-membership-find-by-user-id.handler';
+import { AssertAppExistsService } from '@contexts/tenancy/application/services/write/assert-app-exists/assert-app-exists.service';
+import { AssertTenantExistsService } from '@contexts/tenancy/application/services/write/assert-tenant-exists/assert-tenant-exists.service';
+import { AssertTenantMembershipAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-membership-available/assert-tenant-membership-available.service';
+import { AssertTenantOwnerService } from '@contexts/tenancy/application/services/write/assert-tenant-owner/assert-tenant-owner.service';
+import { AssertTenantSlugAvailableService } from '@contexts/tenancy/application/services/write/assert-tenant-slug-available/assert-tenant-slug-available.service';
+import { TenantBuilder } from '@contexts/tenancy/domain/builders/tenant/tenant.builder';
+import { TenantMembershipBuilder } from '@contexts/tenancy/domain/builders/tenant-membership/tenant-membership.builder';
+import { TENANT_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-read.repository';
+import { TENANT_MEMBERSHIP_READ_REPOSITORY } from '@contexts/tenancy/domain/repositories/read/tenant-membership-read.repository';
+import { TENANT_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-write.repository';
+import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
+import { AppLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/app-lookup/app-lookup.adapter';
+import { UserLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/user-lookup/user-lookup.adapter';
+import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant.entity';
+import { TenantMembershipEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant-membership.entity';
+import { TenantTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-typeorm.mapper';
+import { TenantMembershipTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-membership-typeorm.mapper';
+import { TenantTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-typeorm-read.repository';
+import { TenantTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-typeorm-write.repository';
+import { TenantMembershipTypeOrmReadRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-read.repository';
+import { TenantMembershipTypeOrmWriteRepository } from '@contexts/tenancy/infrastructure/persistence/typeorm/repositories/tenant-membership-typeorm-write.repository';
+import '@contexts/tenancy/transport/graphql/enums/tenant/tenant-registered-enums.graphql';
+import { TenantMembershipGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant/tenant.mapper';
+import { TenantMutationsResolver } from '@contexts/tenancy/transport/graphql/resolvers/tenant/tenant-mutations.resolver';
+import { TenantQueriesResolver } from '@contexts/tenancy/transport/graphql/resolvers/tenant/tenant-queries.resolver';
+import { TenantsController } from '@contexts/tenancy/transport/rest/controllers/tenants.controller';
+import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
+import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
+import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+const COMMAND_HANDLERS = [
+  CreateTenantCommandHandler,
+  UpdateTenantCommandHandler,
+  DeleteTenantCommandHandler,
+  AddTenantMemberCommandHandler,
+];
+
+const QUERY_HANDLERS = [
+  TenantFindByCriteriaQueryHandler,
+  TenantMembershipFindByTenantIdQueryHandler,
+  TenantMembershipFindByUserIdQueryHandler,
+];
+
+const APPLICATION_SERVICES = [
+  AssertAppExistsService,
+  AssertTenantSlugAvailableService,
+  AssertTenantExistsService,
+  AssertTenantOwnerService,
+  AssertTenantMembershipAvailableService,
+];
+
+const DOMAIN_BUILDERS = [TenantBuilder, TenantMembershipBuilder];
+
+const INFRASTRUCTURE_MAPPERS = [
+  TenantTypeOrmMapper,
+  TenantMembershipTypeOrmMapper,
+];
+
+const INFRASTRUCTURE_REPOSITORIES = [
+  { provide: TENANT_WRITE_REPOSITORY, useClass: TenantTypeOrmWriteRepository },
+  {
+    provide: TENANT_MEMBERSHIP_WRITE_REPOSITORY,
+    useClass: TenantMembershipTypeOrmWriteRepository,
+  },
+  {
+    provide: TENANT_MEMBERSHIP_READ_REPOSITORY,
+    useClass: TenantMembershipTypeOrmReadRepository,
+  },
+  { provide: TENANT_READ_REPOSITORY, useClass: TenantTypeOrmReadRepository },
+];
+
+const INFRASTRUCTURE_ENTITIES = [TenantEntity, TenantMembershipEntity];
+
+const INFRASTRUCTURE_ADAPTERS = [
+  { provide: APP_LOOKUP_PORT, useClass: AppLookupAdapter },
+  { provide: USER_LOOKUP_PORT, useClass: UserLookupAdapter },
+];
+
+const TRANSPORT_MAPPERS = [TenantMembershipRestMapper, TenantRestMapper];
+
+const TRANSPORT_REST_CONTROLLERS = [TenantsController];
+
+const TRANSPORT_GRAPHQL_MAPPERS = [
+  TenantGraphQLMapper,
+  TenantMembershipGraphQLMapper,
+];
+
+const TRANSPORT_GRAPHQL_RESOLVERS = [
+  TenantQueriesResolver,
+  TenantMutationsResolver,
+];
+
+@Module({
+  imports: [
+    CqrsModule,
+    TypeOrmModule.forFeature(INFRASTRUCTURE_ENTITIES),
+    // JwtAuthGuard/@CurrentUser come from the global `SecurityModule`
+    // (imported once in CoreModule) — no per-context import needed.
+  ],
+  controllers: [...TRANSPORT_REST_CONTROLLERS],
+  providers: [
+    ...COMMAND_HANDLERS,
+    ...QUERY_HANDLERS,
+    ...APPLICATION_SERVICES,
+    ...DOMAIN_BUILDERS,
+    ...INFRASTRUCTURE_MAPPERS,
+    ...INFRASTRUCTURE_REPOSITORIES,
+    ...INFRASTRUCTURE_ADAPTERS,
+    ...TRANSPORT_MAPPERS,
+    ...TRANSPORT_GRAPHQL_MAPPERS,
+    ...TRANSPORT_GRAPHQL_RESOLVERS,
+  ],
+})
+export class TenancyModule {}

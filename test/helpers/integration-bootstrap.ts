@@ -7,11 +7,13 @@ import { DataSource } from 'typeorm';
 import { SharedGraphQLModule } from '@sisques-labs/nestjs-kit/graphql';
 
 import { appConfig } from '../../src/core/config/app.config';
+import { authConfig } from '../../src/core/config/auth.config';
+import { SecurityModule } from '../../src/core/security/security.module';
 import { bootstrapTestDataSource } from './test-data-source';
 
 const DB_HOST = process.env.DATABASE_HOST ?? 'localhost';
 const DB_PORT = parseInt(process.env.DATABASE_PORT ?? '5433', 10);
-const DB_DATABASE = process.env.DATABASE_DATABASE ?? 'nestjs_template_test';
+const DB_DATABASE = process.env.DATABASE_DATABASE ?? 'account_test';
 const DB_USERNAME = process.env.DATABASE_USERNAME ?? 'postgres';
 const DB_PASSWORD = process.env.DATABASE_PASSWORD ?? 'postgres';
 
@@ -39,8 +41,12 @@ export async function createIntegrationModule(
     imports: [
       ConfigModule.forRoot({
         isGlobal: true,
-        load: [appConfig],
+        load: [appConfig, authConfig],
       }),
+      // Global — bounded-context modules that provide JwtAuthGuard-guarded
+      // controllers (or TokenService, which injects JwtService) need this
+      // in the module graph, same as production's CoreModule.
+      SecurityModule,
       TypeOrmModule.forRoot({
         type: 'postgres',
         host: DB_HOST,

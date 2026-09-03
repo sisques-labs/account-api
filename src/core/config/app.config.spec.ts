@@ -20,7 +20,7 @@ describe('appConfig', () => {
 
     const config = appConfig();
 
-    expect(config.name).toBe('nestjs-template');
+    expect(config.name).toBe('account-api');
     expect(config.nodeEnv).toBe('development');
     expect(config.frontendUrl).toBe('http://localhost:3001');
     expect(config.corsOrigins).toEqual(['http://localhost:3001']);

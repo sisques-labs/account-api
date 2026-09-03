@@ -26,13 +26,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: nestjs_template_test
+          POSTGRES_DB: account_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d nestjs_template_test"
+          --health-cmd "pg_isready -U postgres -d account_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -41,7 +41,7 @@ jobs:
       DATABASE_DRIVER: postgres
       DATABASE_HOST: localhost
       DATABASE_PORT: 5433
-      DATABASE_DATABASE: nestjs_template_test
+      DATABASE_DATABASE: account_test
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: postgres
       FRONTEND_URL: http://localhost:3001
@@ -52,6 +52,28 @@ jobs:
         uses: sisques-labs/workflows/.github/actions/setup@main
         with:
           node_version: "22"
+
+      # Not a `services:` container: those start before checkout, so a
+      # `docker run` step (after Setup, which checks the repo out) is the
+      # only way to bind-mount docker/keycloak/realm-export.json.
+      - name: Start Keycloak
+        run: |
+          docker run -d --name keycloak-test \
+            -p 8082:8080 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+            -v "${{ github.workspace }}/docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro" \
+            quay.io/keycloak/keycloak:26.0 start-dev --import-realm
+
+      - name: Wait for Keycloak
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8082/realms/sisques-account/.well-known/openid-configuration > /dev/null && exit 0
+            sleep 2
+          done
+          echo "Keycloak did not become ready in time" >&2
+          docker logs keycloak-test
+          exit 1
 
       - name: Install dependencies
         uses: sisques-labs/workflows/.github/actions/install@main
@@ -73,13 +95,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: nestjs_template_test
+          POSTGRES_DB: account_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d nestjs_template_test"
+          --health-cmd "pg_isready -U postgres -d account_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -88,7 +110,7 @@ jobs:
       DATABASE_DRIVER: postgres
       DATABASE_HOST: localhost
       DATABASE_PORT: 5433
-      DATABASE_DATABASE: nestjs_template_test
+      DATABASE_DATABASE: account_test
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: postgres
       FRONTEND_URL: http://localhost:3001

@@ -1,4 +1,4 @@
-# NestJS Template
+# Account API
 
 Sisques Labs' base template for new NestJS services: DDD + CQRS + Hexagonal
 architecture, TypeORM/PostgreSQL, optional Kafka event forwarding, REST
@@ -16,8 +16,8 @@ docker run -p 3000:3000 \
   -e DATABASE_PORT=5432 \
   -e DATABASE_USERNAME=postgres \
   -e DATABASE_PASSWORD=secret \
-  -e DATABASE_DATABASE=nestjs_template_db \
-  sisqueslabs/nestjs-template:latest
+  -e DATABASE_DATABASE=account_db \
+  sisqueslabs/account-api:latest
 ```
 
 The container needs a reachable PostgreSQL instance — it does not bundle one.
@@ -26,7 +26,7 @@ The container needs a reachable PostgreSQL instance — it does not bundle one.
 
 | Port | Purpose |
 |------|---------|
-| `3000` | HTTP — REST (`/api/*`), GraphQL (`/graphql`), Swagger docs, health, metrics, MCP (see routes below) |
+| `3000` | HTTP — REST (`/api/v1/*`), GraphQL (`/graphql`), Swagger docs, health, metrics, MCP (see routes below) |
 
 ## Routes
 
@@ -34,7 +34,7 @@ The container needs a reachable PostgreSQL instance — it does not bundle one.
 |------|---------|
 | `GET /api/health/live` | Liveness probe |
 | `GET /api/health/ready` | Readiness probe (checks DB connectivity) |
-| `POST /api/mcp` | MCP (Model Context Protocol) endpoint |
+| `POST /api/v1/mcp` | MCP (Model Context Protocol) endpoint |
 | `POST /graphql` | GraphQL (Apollo) |
 | `GET /docs` | Swagger UI |
 
@@ -71,4 +71,4 @@ See the project's `.env.example` for the full list.
 
 ## Source
 
-https://github.com/sisques-labs/nestjs-template
+https://github.com/sisques-labs/account-api

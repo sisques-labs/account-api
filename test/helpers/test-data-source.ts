@@ -1,15 +1,18 @@
+import { CreateIdentityAndTenancy1788165600000 } from '../../src/database/migrations/1788165600000-CreateIdentityAndTenancy';
+import { SplitUserAndAuthSession1788181125000 } from '../../src/database/migrations/1788181125000-SplitUserAndAuthSession';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
-// Add migration imports here as the first bounded context introduces them,
-// e.g. `import { CreateOrders1780000000000 } from '../../src/database/migrations/1780000000000-CreateOrders';`
-const TEST_MIGRATIONS: DataSourceOptions['migrations'] = [];
+const TEST_MIGRATIONS: DataSourceOptions['migrations'] = [
+  CreateIdentityAndTenancy1788165600000,
+  SplitUserAndAuthSession1788181125000,
+];
 
 export function getTestDataSourceOptions(): DataSourceOptions {
   return {
     type: 'postgres',
     host: process.env.DATABASE_HOST ?? 'localhost',
     port: parseInt(process.env.DATABASE_PORT ?? '5433', 10),
-    database: process.env.DATABASE_DATABASE ?? 'nestjs_template_test',
+    database: process.env.DATABASE_DATABASE ?? 'account_test',
     username: process.env.DATABASE_USERNAME ?? 'postgres',
     password: process.env.DATABASE_PASSWORD ?? 'postgres',
     entities: [],
@@ -40,7 +43,7 @@ export async function bootstrapTestDataSource(): Promise<void> {
     migrationsApplied = true;
   } catch (error) {
     const hint =
-      'If the test DB was previously created with synchronize:true, reset it with: pnpm test:db:down && docker volume rm nestjs-template_postgres_data 2>/dev/null; pnpm test:db:up';
+      'If the test DB was previously created with synchronize:true, reset it with: pnpm test:db:down && docker volume rm account-api_postgres_data 2>/dev/null; pnpm test:db:up';
 
     throw new Error(
       `Failed to apply test database migrations. ${hint}\n\nOriginal error: ${error instanceof Error ? error.message : String(error)}`,
