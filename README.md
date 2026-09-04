@@ -19,6 +19,11 @@ for the full design. This repo currently implements the **MVP**: `account-api`
 standalone, validated via tests/Postman — no `account-web` frontend yet, no
 email-based tenant invites.
 
+Building a consumer app (Gardenia, Nexora, ...) against this service? See
+[`docs/integration-guide.md`](docs/integration-guide.md) for how to
+register/login/refresh and validate tokens from the outside — including
+where today's implementation still falls short of the target design.
+
 Built from [`sisques-labs/nestjs-template`](https://github.com/sisques-labs/nestjs-template)
 — DDD + CQRS + Hexagonal architecture. Three bounded contexts:
 `src/contexts/user/`, `src/contexts/auth/` and `src/contexts/tenancy/` — see
