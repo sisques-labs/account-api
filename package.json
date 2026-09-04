@@ -1,6 +1,6 @@
 {
   "name": "sisqueslabs/account-api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sisques Labs Account API",
   "author": "Sisques Labs",
   "repository": {
@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@apollo/server": "^4.13.0",
+    "@kurrent/kurrentdb-client": "^1.1.2",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@nestjs/apollo": "12.2.2",
     "@nestjs/axios": "^4.0.1",
@@ -69,7 +70,7 @@
     "@opentelemetry/sdk-trace-base": "2.10.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "@opentelemetry/winston-transport": "^0.31.0",
-    "@sisques-labs/nestjs-kit": "^1.7.0",
+    "@sisques-labs/nestjs-kit": "^1.8.0",
     "axios": "^1.20.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.0",
