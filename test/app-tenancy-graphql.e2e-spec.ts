@@ -28,7 +28,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
 
   const registerAndLogin = async (
     prefix: string,
-  ): Promise<{ email: string; accessToken: string }> => {
+  ): Promise<{ email: string; accessToken: string; refreshToken: string }> => {
     const email = uniqueEmail(prefix);
     const password = 'Sup3rStrongPassw0rd!';
     await ctx.http().post('/api/v1/auth/register').send({
@@ -41,7 +41,26 @@ describe('App + Tenancy GraphQL (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email, password });
 
-    return { email, accessToken: login.body.accessToken as string };
+    return {
+      email,
+      accessToken: login.body.accessToken as string,
+      refreshToken: login.body.refreshToken as string,
+    };
+  };
+
+  /**
+   * Tenant/membership creation doesn't reissue the caller's access token,
+   * so its `tenants` claim stays stale until the next refresh — see
+   * `tenant-permission.guard.ts` / design.md "stale role" risk. Tests that
+   * act on a tenant right after creating it (or being added to it) must
+   * refresh first.
+   */
+  const refreshAccessToken = async (refreshToken: string): Promise<string> => {
+    const res = await ctx
+      .http()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken });
+    return res.body.accessToken as string;
   };
 
   it('rejects appCreate without a bearer token', async () => {
@@ -79,8 +98,11 @@ describe('App + Tenancy GraphQL (e2e)', () => {
 
   describe('full flow: create app -> create tenant -> find by id/criteria -> add member -> list members -> update -> delete', () => {
     it('walks the whole MVP flow end to end over GraphQL', async () => {
-      const { accessToken: ownerToken, email: ownerEmail } =
-        await registerAndLogin('gql-owner');
+      const {
+        accessToken: ownerToken,
+        email: ownerEmail,
+        refreshToken: ownerRefreshToken,
+      } = await registerAndLogin('gql-owner');
 
       // 1. Create the app.
       const appName = `Gardenia ${Date.now()}`;
@@ -133,6 +155,10 @@ describe('App + Tenancy GraphQL (e2e)', () => {
       expect(createTenantRes.body.data.tenantCreate.success).toBe(true);
       const tenantId = createTenantRes.body.data.tenantCreate.id as string;
 
+      // 4b. Refresh so the owner's token reflects the OWNER membership
+      // that tenant creation just granted (see `refreshAccessToken` above).
+      const refreshedOwnerToken = await refreshAccessToken(ownerRefreshToken);
+
       // 5. Register a second user and add them as a member.
       const { email: memberEmail } = await registerAndLogin('gql-member');
       const addMemberRes = await gql(
@@ -141,7 +167,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
           tenantMemberAdd(input: $input) { success message }
         }`,
         { input: { tenantId, email: memberEmail, role: 'MEMBER' } },
-      ).set('Authorization', `Bearer ${ownerToken}`);
+      ).set('Authorization', `Bearer ${refreshedOwnerToken}`);
       expect(addMemberRes.body.errors).toBeUndefined();
       expect(addMemberRes.body.data.tenantMemberAdd.success).toBe(true);
 
@@ -152,7 +178,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
           tenantMembershipsFindByTenantId(input: $input) { userId role }
         }`,
         { input: { tenantId } },
-      ).set('Authorization', `Bearer ${ownerToken}`);
+      ).set('Authorization', `Bearer ${refreshedOwnerToken}`);
       const roles = (
         membersRes.body.data.tenantMembershipsFindByTenantId as Array<{
           role: string;
@@ -169,7 +195,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
           tenantMemberAdd(input: $input) { success }
         }`,
         { input: { tenantId, email: memberEmail, role: 'MEMBER' } },
-      ).set('Authorization', `Bearer ${ownerToken}`);
+      ).set('Authorization', `Bearer ${refreshedOwnerToken}`);
       expect(dupMemberRes.body.errors?.[0]?.message).toBeDefined();
 
       // 8. Update the tenant.
@@ -179,7 +205,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
           tenantUpdate(input: $input) { success id }
         }`,
         { input: { tenantId, name: 'Renamed Tenant' } },
-      ).set('Authorization', `Bearer ${ownerToken}`);
+      ).set('Authorization', `Bearer ${refreshedOwnerToken}`);
       expect(updateRes.body.data.tenantUpdate.success).toBe(true);
 
       // 9. A non-owner cannot delete the tenant.
@@ -203,7 +229,7 @@ describe('App + Tenancy GraphQL (e2e)', () => {
           tenantDelete(input: $input) { success }
         }`,
         { input: { tenantId } },
-      ).set('Authorization', `Bearer ${ownerToken}`);
+      ).set('Authorization', `Bearer ${refreshedOwnerToken}`);
       expect(deleteRes.body.data.tenantDelete.success).toBe(true);
       expect(ownerEmail).toEqual(expect.any(String));
     });

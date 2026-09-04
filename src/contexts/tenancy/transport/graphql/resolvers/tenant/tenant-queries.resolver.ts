@@ -11,6 +11,9 @@ import { TenantMembershipResponseDto } from '@contexts/tenancy/transport/graphql
 import { TenantMembershipGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant-membership/tenant-membership.mapper';
 import { TenantGraphQLMapper } from '@contexts/tenancy/transport/graphql/mappers/tenant/tenant.mapper';
 import { tenantFilterableFields } from '@contexts/tenancy/transport/graphql/registries/tenant-filterable-fields.registry';
+import { TenantPermissionEnum } from '@contexts/tenancy/domain/enums/tenant-permission.enum';
+import { RequiresPermission } from '@contexts/tenancy/infrastructure/decorators/requires-permission.decorator';
+import { TenantPermissionGuard } from '@contexts/tenancy/infrastructure/guards/tenant-permission.guard';
 import { JwtAuthGuard } from '@core/security/guards/jwt-auth.guard';
 import { PlatformAdminGuard } from '@core/security/guards/platform-admin.guard';
 import { Logger, UseGuards } from '@nestjs/common';
@@ -56,6 +59,8 @@ export class TenantQueriesResolver {
   }
 
   @Query(() => [TenantMembershipResponseDto])
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.VIEW_TENANT)
   async tenantMembershipsFindByTenantId(
     @Args('input') input: TenantMembershipFindByTenantIdRequestDto,
   ): Promise<TenantMembershipResponseDto[]> {
