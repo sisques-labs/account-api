@@ -15,6 +15,9 @@ import { TenantRestResponseDto } from '@contexts/tenancy/transport/rest/dtos/ten
 import { UpdateTenantDto } from '@contexts/tenancy/transport/rest/dtos/update-tenant.dto';
 import { TenantMembershipRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant-membership/tenant-membership.mapper';
 import { TenantRestMapper } from '@contexts/tenancy/transport/rest/mappers/tenant/tenant.mapper';
+import { TenantPermissionEnum } from '@contexts/tenancy/domain/enums/tenant-permission.enum';
+import { RequiresPermission } from '@contexts/tenancy/infrastructure/decorators/requires-permission.decorator';
+import { TenantPermissionGuard } from '@contexts/tenancy/infrastructure/guards/tenant-permission.guard';
 import {
   CurrentUser,
   CurrentUserPayload,
@@ -152,12 +155,17 @@ export class TenantsController {
   }
 
   @Patch(':tenantId')
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.MANAGE_TENANT)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update a tenant — owner only' })
+  @ApiOperation({
+    summary: 'Update a tenant — requires manage-tenant permission',
+  })
   @ApiResponse({ status: 200, description: 'Tenant updated' })
   @ApiResponse({
     status: 403,
-    description: 'Caller is not an owner of the tenant',
+    description:
+      'Caller has no membership in the tenant, or their role does not grant manage-tenant',
   })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
   @ApiResponse({ status: 409, description: 'Slug already taken for this app' })
@@ -178,12 +186,17 @@ export class TenantsController {
   }
 
   @Delete(':tenantId')
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.DELETE_TENANT)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a tenant — owner only' })
+  @ApiOperation({
+    summary: 'Delete a tenant — requires delete-tenant permission',
+  })
   @ApiResponse({ status: 204, description: 'Tenant deleted' })
   @ApiResponse({
     status: 403,
-    description: 'Caller is not an owner of the tenant',
+    description:
+      'Caller has no membership in the tenant, or their role does not grant delete-tenant',
   })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
   async remove(
@@ -197,11 +210,19 @@ export class TenantsController {
   }
 
   @Post(':tenantId/members')
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.MANAGE_MEMBERS)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Add an existing user as a member of the tenant (by email)',
+    summary:
+      'Add an existing user as a member of the tenant (by email) — requires manage-members permission',
   })
   @ApiResponse({ status: 201, description: 'Member added' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Caller has no membership in the tenant, or their role does not grant manage-members',
+  })
   @ApiResponse({ status: 404, description: 'Tenant or user not found' })
   @ApiResponse({ status: 409, description: 'User is already a member' })
   async addMember(
@@ -219,9 +240,17 @@ export class TenantsController {
   }
 
   @Get(':tenantId/members')
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.VIEW_TENANT)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "List a tenant's members" })
+  @ApiOperation({
+    summary: "List a tenant's members — requires view-tenant permission",
+  })
   @ApiResponse({ status: 200, description: 'Members list' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller has no membership in the tenant',
+  })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
   async listMembers(
     @Param('tenantId', ParseUUIDPipe) tenantId: string,

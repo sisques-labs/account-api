@@ -33,14 +33,84 @@ than one.
 
 ## The `role` field
 
-Free text (`TenantRoleValueObject`, a `StringValueObject`, not an enum) — by
-design. `"owner"` is the only value with fixed platform meaning: the tenant
-creator is auto-assigned it (`CreateTenantCommandHandler`), and the
-architecture doc's business rule "every tenant must have at least one owner"
-is enforced at the service layer where relevant (not a DB constraint, since
-roles are free text). Every other role string (`"member"`, `"admin"`,
-whatever a given app wants) is accepted as-is by `AddTenantMemberCommand` —
-this context never validates or interprets it beyond "non-empty".
+`TenantRoleEnum` (`OWNER`, `ADMIN`, `MEMBER`) — a fixed, closed set, wrapped
+by `TenantRoleValueObject` (`EnumValueObject<typeof TenantRoleEnum>`). The
+tenant creator is auto-assigned `OWNER` (`CreateTenantCommandHandler`), and
+the architecture doc's business rule "every tenant must have at least one
+owner" is enforced at the service layer where relevant. `AddTenantMemberCommand`
+accepts any of the three roles for a new member.
+
+---
+
+## Authorization: `TenantPermissionGuard`
+
+Every tenant-scoped mutation/query beyond simple existence (`updateTenant`,
+`deleteTenant`, `addTenantMember`, and the member-listing reads) requires a
+specific permission, not just "is a member" — enforced by
+`TenantPermissionGuard` (`infrastructure/guards/tenant-permission.guard.ts`)
+plus the `@RequiresPermission(permission)` decorator
+(`infrastructure/decorators/requires-permission.decorator.ts`), applied
+per-endpoint after `JwtAuthGuard`.
+
+`TenantPermissionEnum` (`domain/enums/tenant-permission.enum.ts`) defines four
+generic, platform-level permissions — layer 1 of the tenancy model (see "What
+this context owns" above); never app-specific semantics:
+
+| Permission | Meaning |
+|------------|---------|
+| `VIEW_TENANT` | Read the tenant / list its members |
+| `MANAGE_TENANT` | Update the tenant's editable fields (`name`, `slug`) |
+| `DELETE_TENANT` | Hard-delete the tenant |
+| `MANAGE_MEMBERS` | Add a member to the tenant |
+
+`TENANT_ROLE_PERMISSIONS` (`domain/enums/tenant-role-permissions.map.ts`) is
+the fixed, code-defined `TenantRoleEnum -> TenantPermissionEnum[]` mapping —
+no admin UI/API to customize it per tenant in this iteration:
+
+| Role | Permissions |
+|------|-------------|
+| `OWNER` | all four |
+| `ADMIN` | `VIEW_TENANT`, `MANAGE_TENANT`, `MANAGE_MEMBERS` (not `DELETE_TENANT`) |
+| `MEMBER` | `VIEW_TENANT` only |
+
+`TenantPermissionGuard` reads the caller's tenant role straight from
+`request.user.tenants` (populated by `JwtAuthGuard` from the JWT's `tenants`
+claim) — the same pattern `PlatformAdminGuard` uses for
+`request.user.platformAdmin` — rather than querying
+`ITenantMembershipReadRepository` per request. It resolves the target
+`tenantId` from the REST route param or the GraphQL `input.tenantId` arg,
+looks up the caller's membership for that specific tenant, and throws
+`ForbiddenException` when there's no membership for that tenant or the
+role's permission set doesn't include the one required by
+`@RequiresPermission()`.
+
+**Stale claims**: because the permission check reads the JWT instead of the
+database, a caller's `tenants` claim only reflects memberships that existed
+at the time their access token was last issued (login or refresh) — *not*
+memberships granted during the current session. Concretely: a user who logs
+in and then creates a tenant becomes its `OWNER` in the database
+immediately, but their **existing** access token still has no entry for
+that tenant until they call `POST /auth/refresh` (or log in again). The
+same applies to being added as a member to someone else's tenant mid-session.
+This is the same staleness class `platformAdmin` already has in this
+codebase; there is no push/invalidation mechanism. API consumers that act on
+a tenant right after creating it (or right after being granted a new
+membership) must refresh their session first.
+
+**Adding a new tenant-scoped endpoint**: `TenantPermissionGuard` is wired
+explicitly per-endpoint (`@UseGuards(TenantPermissionGuard)` +
+`@RequiresPermission(...)`), not a global interceptor. Any future
+tenant-scoped REST route or GraphQL operation must apply both itself — it
+will **not** automatically inherit enforcement from this change.
+
+`UpdateTenantCommandHandler` relies solely on `TenantPermissionGuard` for
+authorization — it does **not** call `AssertTenantOwnerService`, so both
+`OWNER` and `ADMIN` (both hold `MANAGE_TENANT`) can update a tenant, matching
+the permission map above. `DeleteTenantCommandHandler` still calls
+`AssertTenantOwnerService` in addition to the guard, since `DELETE_TENANT` is
+`OWNER`-only in the permission map anyway — that check is redundant with the
+guard today but kept as defense-in-depth for the one operation where the two
+line up exactly.
 
 ---
 
@@ -66,17 +136,25 @@ even transiently.
 ## How updating/deleting a tenant works
 
 ```
-PATCH /tenants/{tenantId}   ->  UpdateTenantCommand { tenantId, requesterUserId, name?, slug? }
-DELETE /tenants/{tenantId}  ->  DeleteTenantCommand { tenantId, requesterUserId }
-                             ->  {Update,Delete}TenantCommandHandler
+PATCH /tenants/{tenantId}   ->  TenantPermissionGuard (MANAGE_TENANT)
+                             ->  UpdateTenantCommand { tenantId, requesterUserId, name?, slug? }
+                             ->  UpdateTenantCommandHandler
+                                 1. AssertTenantExistsService (404)
+                                 2. AssertTenantSlugAvailableService, but only
+                                    when the new slug actually differs from the
+                                    tenant's current one (409 otherwise)
+                                 3. tenant.update() -> save
+
+DELETE /tenants/{tenantId}  ->  TenantPermissionGuard (DELETE_TENANT)
+                             ->  DeleteTenantCommand { tenantId, requesterUserId }
+                             ->  DeleteTenantCommandHandler
                                  1. AssertTenantExistsService (404)
                                  2. AssertTenantOwnerService — requester must hold
-                                    the "owner" membership for this tenant (403
-                                    NotTenantOwnerException otherwise)
-                                 3. Update: AssertTenantSlugAvailableService, but
-                                    only when the new slug actually differs from
-                                    the tenant's current one (409 otherwise)
-                                 4. tenant.update()/tenant.delete() -> save/delete
+                                    the OWNER membership for this tenant (403
+                                    NotTenantOwnerException otherwise; redundant
+                                    with the guard today since DELETE_TENANT is
+                                    OWNER-only, kept as defense-in-depth)
+                                 3. tenant.delete() -> delete
 ```
 
 Delete is a hard delete — the tenant row is physically removed. There is no
@@ -88,7 +166,8 @@ transaction-less sequence, to avoid leaving orphan rows.
 ## How adding a member works
 
 ```
-POST /tenants/{tenantId}/members  ->  AddTenantMemberCommand { tenantId, email, role }
+POST /tenants/{tenantId}/members  ->  TenantPermissionGuard (MANAGE_MEMBERS)
+                                   ->  AddTenantMemberCommand { tenantId, email, role }
                                    ->  AddTenantMemberCommandHandler
                                        1. AssertTenantExistsService (404)
                                        2. IUserLookupPort.findUserIdByEmail()
@@ -107,7 +186,8 @@ the person adding a member still shouldn't need to know internal UUIDs.
 
 ## Listing members
 
-`GET /tenants/{tenantId}/members` — 404s if the tenant doesn't exist,
+`GET /tenants/{tenantId}/members` — guarded by `TenantPermissionGuard`
+(`VIEW_TENANT`, held by all three roles). 404s if the tenant doesn't exist,
 otherwise returns every `TenantMembershipViewModel` for it (`id`, `tenantId`,
 `userId`, `role`, timestamps). No email/displayName enrichment — that would
 require reaching into `user`'s data for a read-side join, which the
@@ -125,11 +205,14 @@ the architecture skill's resolver convention:
   (guarded by `PlatformAdminGuard`, same restriction as `GET /tenants`; type-safe
   Criteria pattern: `TenantQueryableField` + `tenantFilterableFields` registry +
   `TenantFilterInput`/`TenantSortInput`) and
-  `tenantMembershipsFindByTenantId(input: TenantMembershipFindByTenantIdRequestDto)`.
-- `TenantMutationsResolver` — `tenantCreate`, `tenantUpdate`, `tenantDelete`
-  (all `@CurrentUser()` + `JwtAuthGuard`, same owner-only rules as the REST
-  handlers) and `tenantMemberAdd`. All four return the shared
-  `MutationResponseDto`.
+  `tenantMembershipsFindByTenantId(input: TenantMembershipFindByTenantIdRequestDto)`
+  (guarded by `TenantPermissionGuard` + `VIEW_TENANT`).
+- `TenantMutationsResolver` — `tenantCreate` (`@CurrentUser()` + `JwtAuthGuard`
+  only — anyone authenticated may create a tenant), `tenantUpdate`
+  (`TenantPermissionGuard` + `MANAGE_TENANT`), `tenantDelete`
+  (`TenantPermissionGuard` + `DELETE_TENANT`), and `tenantMemberAdd`
+  (`TenantPermissionGuard` + `MANAGE_MEMBERS`) — same permission rules as the
+  REST handlers. All four return the shared `MutationResponseDto`.
 
 `TenantRoleEnum` is registered as a GraphQL enum (`transport/graphql/enums/tenant/tenant-registered-enums.graphql.ts`,
 alongside `TenantQueryableFieldEnum`) so `TenantAddMemberRequestDto.role` and
@@ -167,30 +250,30 @@ login/refresh) — see `auth`'s README.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/api/v1/tenants` | JWT | Create a tenant; caller becomes owner. 201, 404 (app), or 409 (slug). |
-| `PATCH` | `/api/v1/tenants/{tenantId}` | JWT, owner | Update a tenant's `name`/`slug`. 200, 403 (not owner), 404, or 409 (slug). |
-| `DELETE` | `/api/v1/tenants/{tenantId}` | JWT, owner | Hard-delete a tenant and its memberships. 204, 403 (not owner), or 404. |
-| `POST` | `/api/v1/tenants/{tenantId}/members` | JWT | Add an existing user as a member, by email. 201, 404 (tenant or user), or 409 (already a member). |
-| `GET` | `/api/v1/tenants/{tenantId}/members` | JWT | List a tenant's members. 200, or 404. |
+| `PATCH` | `/api/v1/tenants/{tenantId}` | JWT, `MANAGE_TENANT` | Update a tenant's `name`/`slug`. 200, 403 (no membership or insufficient role), 404, or 409 (slug). |
+| `DELETE` | `/api/v1/tenants/{tenantId}` | JWT, `DELETE_TENANT` (owner-only) | Hard-delete a tenant and its memberships. 204, 403 (no membership or not owner), or 404. |
+| `POST` | `/api/v1/tenants/{tenantId}/members` | JWT, `MANAGE_MEMBERS` | Add an existing user as a member, by email. 201, 403 (no membership or insufficient role), 404 (tenant or user), or 409 (already a member). |
+| `GET` | `/api/v1/tenants/{tenantId}/members` | JWT, `VIEW_TENANT` | List a tenant's members. 200, 403 (no membership), or 404. |
 
 ### GraphQL
 
 | Operation | Auth | Description |
 |-----------|------|-------------|
 | `mutation tenantCreate` | JWT | Create a tenant; caller becomes owner. |
-| `mutation tenantUpdate` | JWT, owner | Update a tenant's `name`/`slug`. |
-| `mutation tenantDelete` | JWT, owner | Hard-delete a tenant and its memberships. |
-| `mutation tenantMemberAdd` | JWT | Add an existing user as a member, by email. |
+| `mutation tenantUpdate` | JWT, `MANAGE_TENANT` | Update a tenant's `name`/`slug`. |
+| `mutation tenantDelete` | JWT, `DELETE_TENANT` (owner-only) | Hard-delete a tenant and its memberships. |
+| `mutation tenantMemberAdd` | JWT, `MANAGE_MEMBERS` | Add an existing user as a member, by email. |
 | `query tenantsFindByCriteria` | JWT, platform admin | List tenants, filterable/sortable via `TenantFilterInput`/`TenantSortInput`, paginated. |
-| `query tenantMembershipsFindByTenantId` | JWT | List a tenant's members. |
+| `query tenantMembershipsFindByTenantId` | JWT, `VIEW_TENANT` | List a tenant's members. |
 
 ### Commands & queries
 
 | Class | Description |
 |-------|-------------|
 | `CreateTenantCommand` | Creates a tenant + owner membership for the creator |
-| `UpdateTenantCommand` | Owner-only rename/re-slug of a tenant |
-| `DeleteTenantCommand` | Owner-only hard delete of a tenant + its memberships |
-| `AddTenantMemberCommand` | Adds an existing user (by email) as a member |
+| `UpdateTenantCommand` | Rename/re-slug a tenant — requires `MANAGE_TENANT` (guard-only; `OWNER` and `ADMIN` both qualify) |
+| `DeleteTenantCommand` | Owner-only hard delete of a tenant + its memberships (`DELETE_TENANT`, guard and handler agree) |
+| `AddTenantMemberCommand` | Adds an existing user (by email) as a member — requires `MANAGE_MEMBERS` |
 | `AppFindByCriteriaQuery` | Lists apps with pagination/filters — lives in `app` context |
 | `TenantMembershipFindByTenantIdQuery` | Lists a tenant's members |
 | `TenantMembershipFindByUserIdQuery` | Lists a user's memberships — consumed cross-context by `auth` |
@@ -206,13 +289,24 @@ login/refresh) — see `auth`'s README.
 ## Testing
 
 ```bash
-pnpm test src/contexts/tenancy         # unit (REST + GraphQL layers)
+pnpm test src/contexts/tenancy         # unit (domain enums, guard/decorator, REST + GraphQL layers)
 pnpm test src/contexts/app             # unit
 pnpm test:integration                  # App/Tenant/TenantMembership repos, real Postgres
-pnpm test:e2e                          # full create-app/create-tenant/add-member flow, REST and GraphQL
+pnpm test:e2e                          # full create-app/create-tenant/add-member flow, REST and GraphQL,
+                                        # plus TenantPermissionGuard RBAC coverage
 ```
 
 Same layering note as `user`/`auth`: TypeORM mappers/repositories are
 covered by `test/integration/tenancy.repository.integration-spec.ts` (real
 Postgres, including the real FK to `user`'s `user` table for memberships),
 not by isolated unit specs.
+
+`TenantPermissionGuard` has no persistence boundary of its own (it reads
+only `request.user` from the already-verified JWT), so it's covered by unit
+specs (`infrastructure/guards/tenant-permission.guard.spec.ts`,
+`infrastructure/decorators/requires-permission.decorator.spec.ts`,
+`domain/enums/tenant-role-permissions.map.spec.ts`) plus E2E
+(`test/tenancy-rbac.e2e-spec.ts` for REST,
+`test/tenancy-rbac-graphql.e2e-spec.ts` for GraphQL — sufficient-role,
+insufficient-role, and non-member cases for all four guarded operations) —
+no dedicated `test/integration/*.integration-spec.ts` layer for it.

@@ -20,6 +20,7 @@ import { TENANT_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/w
 import { TENANT_MEMBERSHIP_WRITE_REPOSITORY } from '@contexts/tenancy/domain/repositories/write/tenant-membership-write.repository';
 import { AppLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/app-lookup/app-lookup.adapter';
 import { UserLookupAdapter } from '@contexts/tenancy/infrastructure/adapters/user-lookup/user-lookup.adapter';
+import { TenantPermissionGuard } from '@contexts/tenancy/infrastructure/guards/tenant-permission.guard';
 import { TenantEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant.entity';
 import { TenantMembershipEntity } from '@contexts/tenancy/infrastructure/persistence/typeorm/entities/tenant-membership.entity';
 import { TenantTypeOrmMapper } from '@contexts/tenancy/infrastructure/persistence/typeorm/mappers/tenant-typeorm.mapper';
@@ -88,6 +89,8 @@ const INFRASTRUCTURE_ADAPTERS = [
   { provide: USER_LOOKUP_PORT, useClass: UserLookupAdapter },
 ];
 
+const INFRASTRUCTURE_GUARDS = [TenantPermissionGuard];
+
 const TRANSPORT_MAPPERS = [TenantMembershipRestMapper, TenantRestMapper];
 
 const TRANSPORT_REST_CONTROLLERS = [TenantsController];
@@ -118,6 +121,7 @@ const TRANSPORT_GRAPHQL_RESOLVERS = [
     ...INFRASTRUCTURE_MAPPERS,
     ...INFRASTRUCTURE_REPOSITORIES,
     ...INFRASTRUCTURE_ADAPTERS,
+    ...INFRASTRUCTURE_GUARDS,
     ...TRANSPORT_MAPPERS,
     ...TRANSPORT_GRAPHQL_MAPPERS,
     ...TRANSPORT_GRAPHQL_RESOLVERS,
