@@ -6,7 +6,7 @@ import { Reflector } from '@nestjs/core';
 import { TenantPermissionGuard } from './tenant-permission.guard';
 
 describe('TenantPermissionGuard', () => {
-  let guard: TenantPermissionGuard;
+  let guard: InstanceType<typeof TenantPermissionGuard>;
   let reflector: jest.Mocked<Reflector>;
 
   const OWNER_TENANT_ID = '550e8400-e29b-41d4-a716-446655440020';

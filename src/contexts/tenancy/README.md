@@ -52,6 +52,16 @@ plus the `@RequiresPermission(permission)` decorator
 (`infrastructure/decorators/requires-permission.decorator.ts`), applied
 per-endpoint after `JwtAuthGuard`.
 
+Both are thin, `TenantPermissionEnum`-typed aliases of the generic mechanism
+in `@sisques-labs/nestjs-kit/rbac` (`createTenantPermissionGuard()` /
+`RequiresTenantPermission()`) — see that package's README ("RBAC (Tenant
+Permissions)") for what the shared factory does. The permission enum and
+`TENANT_ROLE_PERMISSIONS` mapping below stay local to this context; the kit
+never defines what a role grants, only the plumbing that checks it. Any
+other app built on `account-api` (Gardenia, Nexora, ...) is expected to
+build its own equivalent this same way, with its own permission enum and
+map — see `docs/integration-guide.md` §5 for a worked example.
+
 `TenantPermissionEnum` (`domain/enums/tenant-permission.enum.ts`) defines four
 generic, platform-level permissions — layer 1 of the tenancy model (see "What
 this context owns" above); never app-specific semantics:

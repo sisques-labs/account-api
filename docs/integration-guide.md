@@ -116,15 +116,25 @@ README). Until then, "logging a user in" from your app means calling
 `/auth/login` directly (server-to-server or from your own login form),
 not redirecting to a Sisques Account–hosted page.
 
-## 5. Authorization in your app: build your own guard, not a shared one
+## 5. Authorization in your app: your own policy, on a shared mechanism
 
 `account-api`'s `tenancy` context ships **layer 1 only** — the mechanics of
 who belongs to a tenant and with which of the three fixed roles (`OWNER`,
-`ADMIN`, `MEMBER`). It does **not** ship a reusable guard, decorator, or
-permission enum for your app to import — there is no such thing in
-`@sisques-labs/nestjs-kit` today, and there won't be, because what a role
-should be allowed to *do* is inherently app-specific (layer 2). **Every
-consumer app implements its own permission model and its own guard.**
+`ADMIN`, `MEMBER`). What a role should be allowed to *do* (layer 2) is
+inherently app-specific, so `account-api` never ships a permission enum or
+a role→permission mapping for your app to import. **Every consumer app
+defines its own permission model.**
+
+The plumbing that *reads* that model — resolving the caller's tenant
+membership from the JWT claim, comparing it against a map, rejecting with
+403 — is common enough that it's not worth rewriting per app. As of
+`@sisques-labs/nestjs-kit@1.9.0`, that mechanism ships as
+`@sisques-labs/nestjs-kit/rbac` (`createTenantPermissionGuard()` +
+`RequiresTenantPermission()`) — extracted from this repo's own
+`TenantPermissionGuard`/`@RequiresPermission()`
+(`src/contexts/tenancy/infrastructure/{guards,decorators}/`), which now
+builds on that same factory instead of a hand-rolled guard. **Your app
+should do the same, not re-implement the guard from scratch.**
 
 Concretely, for a new app (say `gardenia-api`), that means:
 
@@ -148,45 +158,33 @@ Concretely, for a new app (say `gardenia-api`), that means:
    `TENANT_ROLE_PERMISSIONS` mapping at all:
 
    ```typescript
-   export const GARDEN_ROLE_PERMISSIONS: Record<TenantRoleEnum, GardenPermissionEnum[]> = {
+   export const GARDEN_ROLE_PERMISSIONS: Record<string, GardenPermissionEnum[]> = {
      OWNER:  [VIEW_PLANTS, WATER_PLANT, DELETE_PLANT, INVITE_GARDENER],
      ADMIN:  [VIEW_PLANTS, WATER_PLANT, INVITE_GARDENER], // no delete
      MEMBER: [VIEW_PLANTS, WATER_PLANT],                  // no invite, no delete
    };
    ```
 
-3. **Your own guard + decorator**, following the same shape as
-   `account-api`'s `TenantPermissionGuard` /
-   `@RequiresPermission()`
-   (`src/contexts/tenancy/infrastructure/{guards,decorators}/`), but reading
-   your own map. It runs after your own `JwtAuthGuard` (§2) and reads the
-   caller's role for the target tenant straight off `request.user.tenants`
-   — no call back to `account-api` needed:
+3. **Your own guard + decorator, built from the kit's factory** — not a
+   hand-rolled `CanActivate` class. It runs after your own `JwtAuthGuard`
+   (§2) and reads the caller's role for the target tenant straight off
+   `request.user.tenants` — no call back to `account-api` needed:
 
    ```typescript
-   @Injectable()
-   export class GardenPermissionGuard implements CanActivate {
-     constructor(private readonly reflector: Reflector) {}
+   import {
+     createTenantPermissionGuard,
+     RequiresTenantPermission,
+   } from '@sisques-labs/nestjs-kit/rbac';
 
-     canActivate(context: ExecutionContext): boolean {
-       const required = this.reflector.get<GardenPermissionEnum>(
-         REQUIRES_GARDEN_PERMISSION_KEY,
-         context.getHandler(),
-       );
-       if (!required) return true;
+   export const GardenPermissionGuard = createTenantPermissionGuard({
+     rolePermissions: GARDEN_ROLE_PERMISSIONS,
+     // Optional — defaults to account-api's own convention (REST `:tenantId`
+     // param, GraphQL top-level `tenantId`/`input.tenantId` arg). Override
+     // when your route param is named differently, e.g. `gardenId`:
+     // resolveTenantId: (context) => context.switchToHttp().getRequest().params.gardenId,
+   });
 
-       const request = context
-         .switchToHttp()
-         .getRequest<Request & { user: IAccessTokenClaims }>();
-       const tenantId = request.params.gardenId; // your app's own tenant-shaped id
-       const membership = request.user.tenants.find((t) => t.tenantId === tenantId);
-
-       if (!membership) throw new ForbiddenException('No membership in this garden');
-       const granted = GARDEN_ROLE_PERMISSIONS[membership.role as TenantRoleEnum] ?? [];
-       if (!granted.includes(required)) throw new ForbiddenException('Insufficient role');
-       return true;
-     }
-   }
+   export const RequiresGardenPermission = RequiresTenantPermission<GardenPermission>;
    ```
 
 4. **Wire it per endpoint**, same as `TenantsController` does today:
@@ -197,6 +195,9 @@ Concretely, for a new app (say `gardenia-api`), that means:
    @RequiresGardenPermission(GardenPermissionEnum.DELETE_PLANT)
    async deletePlant(...) { ... }
    ```
+
+   See `@sisques-labs/nestjs-kit`'s README ("RBAC (Tenant Permissions)") for
+   the full reference on what the factory does and its options.
 
 **Things this implies:**
 
@@ -225,7 +226,7 @@ Concretely, for a new app (say `gardenia-api`), that means:
 | Register / login / refresh via REST | ✅ Implemented (`/api/v1/auth/*`) |
 | `Authorization: Bearer` validation in your own backend | ✅ Works, but requires sharing `JWT_SECRET` (see §2 gap) |
 | Tenant creation / membership (capa 1 tenancy) | ✅ Implemented (`/api/v1/tenants*`, `/api/v1/apps*` — see root README example) |
-| Reusable authorization guard/permissions for your app (capa 2) | ❌ Not shipped by design — each consumer app builds its own (see §5) |
+| Tenant-permission guard mechanism (`@sisques-labs/nestjs-kit/rbac`) | ✅ Implemented (v1.9.0+) — bring your own permission enum + role map, the guard/decorator are shared (see §5) |
 | Shared-cookie SSO across `*.sisqueslabs.com` (Pattern A) | ❌ Not wired up (`COOKIE_DOMAIN` unset, untested end-to-end) |
 | `GET /api/token` for SPA clients (Pattern B) | ❌ Not built |
 | Hosted login page (`account-web`) + redirect flow | ❌ Not built (out of MVP scope) |
