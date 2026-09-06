@@ -1,4 +1,7 @@
-import { InvalidStringException, StringValueObject } from '@sisques-labs/nestjs-kit';
+import {
+  InvalidStringException,
+  StringValueObject,
+} from '@sisques-labs/nestjs-kit';
 
 import { TenantNameValueObject } from './tenant-name.vo';
 
@@ -6,19 +9,16 @@ const createName = (value: string) => new TenantNameValueObject(value);
 
 describe('TenantNameValueObject', () => {
   describe('construction', () => {
-    it.each([
-      'My Garden',
-      'A',
-      'Tenant #1',
-      'Acme Co.',
-      'José García',
-    ])('should accept a valid tenant name (%s)', (name) => {
-      const valueObject = createName(name);
+    it.each(['My Garden', 'A', 'Tenant #1', 'Acme Co.', 'José García'])(
+      'should accept a valid tenant name (%s)',
+      (name) => {
+        const valueObject = createName(name);
 
-      expect(valueObject).toBeInstanceOf(TenantNameValueObject);
-      expect(valueObject.value).toBe(name);
-      expect(valueObject.isNotEmpty()).toBe(true);
-    });
+        expect(valueObject).toBeInstanceOf(TenantNameValueObject);
+        expect(valueObject.value).toBe(name);
+        expect(valueObject.isNotEmpty()).toBe(true);
+      },
+    );
 
     it('should trim surrounding whitespace', () => {
       expect(createName('  My Garden  ').value).toBe('My Garden');

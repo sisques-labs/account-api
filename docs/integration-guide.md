@@ -64,7 +64,7 @@ Today:
   "sub": "<userId>",
   "email": "<email>",
   "platformAdmin": false,
-  "tenants": [{ "tenantId": "...", "role": "owner" }]
+  "tenants": [{ "tenantId": "...", "role": "OWNER" }]
 }
 ```
 
@@ -72,11 +72,13 @@ Today:
   tenant or being added as a member doesn't retroactively update an
   already-issued token. A client needs to re-login or wait for its next
   refresh to see a new membership.
-- `role` is a free-text label `account-api` stores but never interprets
-  beyond `owner` (which controls invite/remove/rename/delete on the
-  platform side). What each role *means* inside your app (e.g. Gardenia's
-  "member" can water but not delete plants) is entirely your app's own
-  authorization logic — `account-api` just carries the label.
+- `role` is one of `OWNER` / `ADMIN` / `MEMBER` (`TenantRoleEnum`,
+  `src/contexts/tenancy/domain/enums/tenant-role.enum.ts`) — a **fixed,
+  closed set** `account-api` assigns and stores, but never interprets
+  beyond its own platform-level permissions (see §5). What each role
+  *means* inside your app (e.g. Gardenia's `MEMBER` can water but not
+  delete plants) is entirely your app's own authorization logic —
+  `account-api` just carries the label.
 - Token TTL is short (`JWT_EXPIRES_IN`, default 15m) by design, so budget
   for the refresh flow (§1) rather than trying to cache a token long-term.
 
@@ -114,13 +116,117 @@ README). Until then, "logging a user in" from your app means calling
 `/auth/login` directly (server-to-server or from your own login form),
 not redirecting to a Sisques Account–hosted page.
 
-## 4. Summary — what you can rely on today vs. not
+## 5. Authorization in your app: your own policy, on a shared mechanism
+
+`account-api`'s `tenancy` context ships **layer 1 only** — the mechanics of
+who belongs to a tenant and with which of the three fixed roles (`OWNER`,
+`ADMIN`, `MEMBER`). What a role should be allowed to *do* (layer 2) is
+inherently app-specific, so `account-api` never ships a permission enum or
+a role→permission mapping for your app to import. **Every consumer app
+defines its own permission model.**
+
+The plumbing that *reads* that model — resolving the caller's tenant
+membership from the JWT claim, comparing it against a map, rejecting with
+403 — is common enough that it's not worth rewriting per app. As of
+`@sisques-labs/nestjs-kit@1.9.0`, that mechanism ships as
+`@sisques-labs/nestjs-kit/rbac` (`createTenantPermissionGuard()` +
+`RequiresTenantPermission()`) — extracted from this repo's own
+`TenantPermissionGuard`/`@RequiresPermission()`
+(`src/contexts/tenancy/infrastructure/{guards,decorators}/`), which now
+builds on that same factory instead of a hand-rolled guard. **Your app
+should do the same, not re-implement the guard from scratch.**
+
+Concretely, for a new app (say `gardenia-api`), that means:
+
+1. **Your own permission enum**, named for your domain — not a copy of
+   `account-api`'s `TenantPermissionEnum`:
+
+   ```typescript
+   // gardenia-api/src/contexts/garden/domain/enums/garden-permission.enum.ts
+   export enum GardenPermissionEnum {
+     VIEW_PLANTS = 'VIEW_PLANTS',
+     WATER_PLANT = 'WATER_PLANT',
+     DELETE_PLANT = 'DELETE_PLANT',
+     INVITE_GARDENER = 'INVITE_GARDENER',
+   }
+   ```
+
+2. **Your own `TenantRoleEnum -> GardenPermissionEnum[]` map.** You reuse
+   `account-api`'s three role labels (they're the only ones that will ever
+   appear in the `tenants` claim) but decide freely what each one unlocks
+   in your domain — it does not have to mirror `account-api`'s own
+   `TENANT_ROLE_PERMISSIONS` mapping at all:
+
+   ```typescript
+   export const GARDEN_ROLE_PERMISSIONS: Record<string, GardenPermissionEnum[]> = {
+     OWNER:  [VIEW_PLANTS, WATER_PLANT, DELETE_PLANT, INVITE_GARDENER],
+     ADMIN:  [VIEW_PLANTS, WATER_PLANT, INVITE_GARDENER], // no delete
+     MEMBER: [VIEW_PLANTS, WATER_PLANT],                  // no invite, no delete
+   };
+   ```
+
+3. **Your own guard + decorator, built from the kit's factory** — not a
+   hand-rolled `CanActivate` class. It runs after your own `JwtAuthGuard`
+   (§2) and reads the caller's role for the target tenant straight off
+   `request.user.tenants` — no call back to `account-api` needed:
+
+   ```typescript
+   import {
+     createTenantPermissionGuard,
+     RequiresTenantPermission,
+   } from '@sisques-labs/nestjs-kit/rbac';
+
+   export const GardenPermissionGuard = createTenantPermissionGuard({
+     rolePermissions: GARDEN_ROLE_PERMISSIONS,
+     // Optional — defaults to account-api's own convention (REST `:tenantId`
+     // param, GraphQL top-level `tenantId`/`input.tenantId` arg). Override
+     // when your route param is named differently, e.g. `gardenId`:
+     // resolveTenantId: (context) => context.switchToHttp().getRequest().params.gardenId,
+   });
+
+   export const RequiresGardenPermission = RequiresTenantPermission<GardenPermission>;
+   ```
+
+4. **Wire it per endpoint**, same as `TenantsController` does today:
+
+   ```typescript
+   @Delete(':gardenId/plants/:plantId')
+   @UseGuards(JwtAuthGuard, GardenPermissionGuard)
+   @RequiresGardenPermission(GardenPermissionEnum.DELETE_PLANT)
+   async deletePlant(...) { ... }
+   ```
+
+   See `@sisques-labs/nestjs-kit`'s README ("RBAC (Tenant Permissions)") for
+   the full reference on what the factory does and its options.
+
+**Things this implies:**
+
+- The `tenantId` in the claim is a neutral UUID that `account-api` treats as
+  "a tenant" — your app is free to treat that same UUID as "a garden", "a
+  workspace", or whatever your domain calls it. There's no separate
+  per-app tenant id to manage.
+- You cannot introduce a fourth role (e.g. `"GARDENER_PRO"`) — the
+  `tenants` claim only ever carries `OWNER`/`ADMIN`/`MEMBER`, because
+  `account-api` is the only service that manages membership and mints the
+  token. If your app needs finer-grained per-user flags beyond those three
+  roles, model that as your own data (e.g. a `garden_member` extra-flags
+  table), not as a new tenant role.
+- Guard enforcement is **per-endpoint, not automatic** — same caveat as
+  `account-api`'s own `tenancy/README.md`: adding a new tenant-scoped route
+  later means adding `@UseGuards()`/`@RequiresGardenPermission()` to it
+  yourself, in your app.
+- Same staleness caveat as §2: a role change takes effect for a caller only
+  after their next login/refresh, since the guard reads the JWT, not a DB
+  row, on every request.
+
+## 6. Summary — what you can rely on today vs. not
 
 | Capability | Status |
 |---|---|
 | Register / login / refresh via REST | ✅ Implemented (`/api/v1/auth/*`) |
 | `Authorization: Bearer` validation in your own backend | ✅ Works, but requires sharing `JWT_SECRET` (see §2 gap) |
 | Tenant creation / membership (capa 1 tenancy) | ✅ Implemented (`/api/v1/tenants*`, `/api/v1/apps*` — see root README example) |
+| Tenant-permission guard mechanism (`@sisques-labs/nestjs-kit/rbac`) | ✅ Implemented (v1.9.0+) — bring your own permission enum + role map, the guard/decorator are shared (see §5) |
 | Shared-cookie SSO across `*.sisqueslabs.com` (Pattern A) | ❌ Not wired up (`COOKIE_DOMAIN` unset, untested end-to-end) |
 | `GET /api/token` for SPA clients (Pattern B) | ❌ Not built |
 | Hosted login page (`account-web`) + redirect flow | ❌ Not built (out of MVP scope) |
