@@ -64,31 +64,6 @@ describe('SessionAggregate', () => {
     });
   });
 
-  describe('rotate() — deprecated in-place rotation, kept for WU-3a/WU-3b boundary', () => {
-    it('should replace the refresh token hash and expiry, and touch updatedAt', () => {
-      const session = buildSession();
-      const newHash = 'b'.repeat(64);
-      const newExpiresAt = new Date(Date.now() + 2_000_000);
-
-      session.rotate(newHash, newExpiresAt);
-
-      expect(session.refreshTokenHash.value).toBe(newHash);
-      expect(session.expiresAt.value).toEqual(newExpiresAt);
-      expect(session.updatedAt.value.getTime()).toBeGreaterThanOrEqual(
-        UPDATED_AT.getTime(),
-      );
-    });
-
-    it('should not touch revokedAt or replacedBySessionId', () => {
-      const session = buildSession();
-
-      session.rotate('b'.repeat(64), new Date(Date.now() + 2_000_000));
-
-      expect(session.isRevoked()).toBe(false);
-      expect(session.replacedBySessionId).toBeNull();
-    });
-  });
-
   describe('revoke()', () => {
     it('should set revokedAt and replacedBySessionId, and mark the session revoked', () => {
       const session = buildSession();

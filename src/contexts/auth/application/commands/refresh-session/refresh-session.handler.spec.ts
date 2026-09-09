@@ -6,6 +6,9 @@ import { HashRefreshTokenService } from '@contexts/auth/application/services/wri
 import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { InvalidRefreshTokenException } from '@contexts/auth/domain/exceptions/invalid-refresh-token.exception';
+import { RefreshTokenReuseDetectedException } from '@contexts/auth/domain/exceptions/refresh-token-reuse-detected.exception';
+import { IRotateResult } from '@contexts/auth/domain/interfaces/rotate-result.interface';
+import { RotateSessionCallback } from '@contexts/auth/domain/interfaces/rotate-session-callback.interface';
 import { ISessionWriteRepository } from '@contexts/auth/domain/repositories/write/session-write.repository';
 import { ConfigService } from '@nestjs/config';
 
@@ -20,6 +23,7 @@ describe('RefreshSessionCommandHandler', () => {
   let generateRefreshTokenService: jest.Mocked<GenerateRefreshTokenService>;
   let hashRefreshTokenService: jest.Mocked<HashRefreshTokenService>;
   let configService: jest.Mocked<ConfigService>;
+  let sessionBuilder: SessionBuilder;
 
   const command = new RefreshSessionCommand({
     refreshToken: 'raw-refresh-token',
@@ -31,17 +35,40 @@ describe('RefreshSessionCommandHandler', () => {
     platformAdmin: false,
   };
 
-  const buildSession = (expiresAt: Date) =>
+  const buildSession = (
+    overrides: Partial<{
+      expiresAt: Date;
+      revokedAt: Date | null;
+      replacedBySessionId: string | null;
+    }> = {},
+  ) =>
     new SessionBuilder()
       .withId('a1a1a1a1-e29b-41d4-a716-446655440000')
       .withUserId(USER_LOOKUP_RESULT.userId)
       .withRefreshTokenHash('a'.repeat(64))
-      .withExpiresAt(expiresAt)
+      .withExpiresAt(overrides.expiresAt ?? new Date(Date.now() + 1_000_000))
+      .withRevokedAt(overrides.revokedAt ?? null)
+      .withReplacedBySessionId(overrides.replacedBySessionId ?? null)
       .withCreatedAt(new Date('2024-01-01'))
       .withUpdatedAt(new Date('2024-01-01'))
       .build();
 
+  /**
+   * Drives the same locked-transaction contract `SessionTypeOrmWriteRepository.rotate()`
+   * provides in production: runs the handler-supplied callback against `current`
+   * and lets it throw/return like the real repository would.
+   */
+  const runRotate = async (
+    current: ReturnType<typeof buildSession> | null,
+    callback: RotateSessionCallback,
+  ): Promise<IRotateResult | null> => {
+    if (!current) return null;
+    const findLockedById = async () => null;
+    return callback(current, findLockedById);
+  };
+
   beforeEach(() => {
+    sessionBuilder = new SessionBuilder();
     sessionWriteRepository = {
       findByUserId: jest.fn(),
       findByRefreshTokenHash: jest.fn(),
@@ -78,28 +105,30 @@ describe('RefreshSessionCommandHandler', () => {
       generateRefreshTokenService,
       hashRefreshTokenService,
       configService,
+      sessionBuilder,
     );
   });
 
-  it('should throw InvalidRefreshTokenException when no session matches the hash', async () => {
+  it('should throw InvalidRefreshTokenException when no session matches the presented hash', async () => {
     hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
-    sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(null);
+    sessionWriteRepository.rotate.mockImplementation((_hash, callback) =>
+      runRotate(null, callback),
+    );
 
     await expect(handler.execute(command)).rejects.toThrow(
       InvalidRefreshTokenException,
     );
   });
 
-  it('should delete and throw when the stored session is expired', async () => {
+  it('should throw InvalidRefreshTokenException when the presented session is expired', async () => {
     hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
-    const session = buildSession(new Date(Date.now() - 1000));
-    sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(session);
+    const session = buildSession({ expiresAt: new Date(Date.now() - 1000) });
+    sessionWriteRepository.rotate.mockImplementation((_hash, callback) =>
+      runRotate(session, callback),
+    );
 
     await expect(handler.execute(command)).rejects.toThrow(
       InvalidRefreshTokenException,
-    );
-    expect(sessionWriteRepository.delete).toHaveBeenCalledWith(
-      session.id.value,
     );
   });
 
@@ -107,9 +136,10 @@ describe('RefreshSessionCommandHandler', () => {
     hashRefreshTokenService.execute
       .mockResolvedValueOnce('a'.repeat(64)) // presented token hash
       .mockResolvedValueOnce('c'.repeat(64)); // new token hash
-    const session = buildSession(new Date(Date.now() + 1_000_000));
-    sessionWriteRepository.findByRefreshTokenHash.mockResolvedValue(session);
-    sessionWriteRepository.save.mockResolvedValue(session);
+    const session = buildSession();
+    sessionWriteRepository.rotate.mockImplementation((_hash, callback) =>
+      runRotate(session, callback),
+    );
     userLookupPort.findById.mockResolvedValue(USER_LOOKUP_RESULT);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('new-access-token');
@@ -119,9 +149,45 @@ describe('RefreshSessionCommandHandler', () => {
 
     expect(result.accessToken).toBe('new-access-token');
     expect(result.refreshToken).toBe('new-raw-token');
-    expect(session.refreshTokenHash.value).toBe('c'.repeat(64));
+    expect(session.isRevoked()).toBe(true);
     expect(userLookupPort.findById).toHaveBeenCalledWith(
       USER_LOOKUP_RESULT.userId,
     );
+  });
+
+  describe('reuse detection', () => {
+    it('should throw RefreshTokenReuseDetectedException and revoke the whole chain when the presented token is already consumed', async () => {
+      hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
+      const alreadyConsumed = buildSession({
+        revokedAt: new Date('2024-06-01'),
+        replacedBySessionId: 'b1b1b1b1-e29b-41d4-a716-446655440000',
+      });
+      sessionWriteRepository.rotate.mockImplementation((_hash, callback) =>
+        runRotate(alreadyConsumed, callback),
+      );
+
+      await expect(handler.execute(command)).rejects.toThrow(
+        RefreshTokenReuseDetectedException,
+      );
+      expect(sessionWriteRepository.revokeAllByUserId).toHaveBeenCalledWith(
+        USER_LOOKUP_RESULT.userId,
+      );
+    });
+
+    it('should never sign a new access token when reuse is detected', async () => {
+      hashRefreshTokenService.execute.mockResolvedValue('a'.repeat(64));
+      const alreadyConsumed = buildSession({
+        revokedAt: new Date('2024-06-01'),
+        replacedBySessionId: 'b1b1b1b1-e29b-41d4-a716-446655440000',
+      });
+      sessionWriteRepository.rotate.mockImplementation((_hash, callback) =>
+        runRotate(alreadyConsumed, callback),
+      );
+
+      await expect(handler.execute(command)).rejects.toThrow(
+        RefreshTokenReuseDetectedException,
+      );
+      expect(tokenSignService.execute).not.toHaveBeenCalled();
+    });
   });
 });

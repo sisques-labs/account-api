@@ -32,19 +32,6 @@ export class SessionAggregate extends BaseAggregate {
     this._replacedBySessionId = props.replacedBySessionId;
   }
 
-  /**
-   * @deprecated WU-3a scaffolding only. `RefreshSessionCommandHandler`
-   * still calls this to keep compiling without activating chain rotation
-   * in the live refresh endpoint (see `design.md`'s WU-3a/WU-3b split).
-   * WU-3b (Phase 4) replaces every call site with
-   * `ISessionWriteRepository.rotate()` and removes this method.
-   */
-  public rotate(hash: string, expiresAt: Date): void {
-    this._refreshTokenHash = new RefreshTokenHashValueObject(hash);
-    this._expiresAt = new DateValueObject(expiresAt);
-    this.touch();
-  }
-
   public isExpired(now: Date = new Date()): boolean {
     return this._expiresAt.value.getTime() <= now.getTime();
   }
