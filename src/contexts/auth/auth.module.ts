@@ -4,9 +4,11 @@ import { RegisterUserCommandHandler } from '@contexts/auth/application/commands/
 import { IDENTITY_PROVIDER_PORT } from '@contexts/auth/application/ports/identity-provider.port';
 import { TENANT_MEMBERSHIP_LOOKUP_PORT } from '@contexts/auth/application/ports/tenant-membership-lookup.port';
 import { USER_LOOKUP_PORT } from '@contexts/auth/application/ports/user-lookup.port';
+import { USER_PLATFORM_ADMIN_PORT } from '@contexts/auth/application/ports/user-platform-admin.port';
 import { USER_PROVISIONING_PORT } from '@contexts/auth/application/ports/user-provisioning.port';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { ReconcilePlatformAdminService } from '@contexts/auth/application/services/write/reconcile-platform-admin/reconcile-platform-admin.service';
 import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { TokenVerifyService } from '@contexts/auth/application/services/write/token-verify/token-verify.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
@@ -14,6 +16,7 @@ import { SESSION_WRITE_REPOSITORY } from '@contexts/auth/domain/repositories/wri
 import { KeycloakIdentityProviderAdapter } from '@contexts/auth/infrastructure/adapters/keycloak-identity-provider.adapter';
 import { TenantMembershipLookupAdapter } from '@contexts/auth/infrastructure/adapters/tenant-membership-lookup.adapter';
 import { UserLookupAdapter } from '@contexts/auth/infrastructure/adapters/user-lookup.adapter';
+import { UserPlatformAdminAdapter } from '@contexts/auth/infrastructure/adapters/user-platform-admin.adapter';
 import { UserProvisioningAdapter } from '@contexts/auth/infrastructure/adapters/user-provisioning.adapter';
 import { SessionEntity } from '@contexts/auth/infrastructure/persistence/typeorm/entities/session.entity';
 import { SessionTypeOrmMapper } from '@contexts/auth/infrastructure/persistence/typeorm/mappers/session-typeorm.mapper';
@@ -35,6 +38,7 @@ const APPLICATION_SERVICES = [
   TokenVerifyService,
   GenerateRefreshTokenService,
   HashRefreshTokenService,
+  ReconcilePlatformAdminService,
 ];
 
 const DOMAIN_BUILDERS = [SessionBuilder];
@@ -61,6 +65,10 @@ const INFRASTRUCTURE_ADAPTERS = [
   },
   { provide: USER_LOOKUP_PORT, useClass: UserLookupAdapter },
   { provide: USER_PROVISIONING_PORT, useClass: UserProvisioningAdapter },
+  {
+    provide: USER_PLATFORM_ADMIN_PORT,
+    useClass: UserPlatformAdminAdapter,
+  },
 ];
 
 const TRANSPORT_REST_CONTROLLERS = [AuthController];

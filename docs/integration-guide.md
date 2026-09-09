@@ -69,6 +69,12 @@ JWT locally with Sisques Account's public key" — **this is now built**.
   tenant or being added as a member doesn't retroactively update an
   already-issued token. A client needs to re-login or wait for its next
   refresh to see a new membership.
+- `platformAdmin` is reconciled on every login against the `account-api`
+  operator's `PLATFORM_ADMIN_EMAILS` env var (comma-separated allowlist) —
+  see `src/contexts/auth/README.md`'s "PLATFORM_ADMIN_EMAILS reconciliation"
+  section. It's set/cleared automatically by email membership in that list;
+  there's no admin-management endpoint. Same staleness caveat as `tenants`:
+  a change to the allowlist takes effect on that user's next login.
 - `role` is one of `OWNER` / `ADMIN` / `MEMBER` (`TenantRoleEnum`,
   `src/contexts/tenancy/domain/enums/tenant-role.enum.ts`) — a **fixed,
   closed set** `account-api` assigns and stores, but never interprets
@@ -228,4 +234,5 @@ Concretely, for a new app (say `gardenia-api`), that means:
 | `GET /api/token` for SPA clients (Pattern B) | ❌ Not built |
 | Hosted login page (`account-web`) + redirect flow | ❌ Not built (out of MVP scope) |
 | Asymmetric signing (RS256) + JWKS endpoint | ✅ Implemented (`GET /.well-known/jwks.json`) |
+| `platformAdmin` bootstrap via `PLATFORM_ADMIN_EMAILS` | ✅ Implemented — reconciled on every login (see §2, `src/contexts/auth/README.md`) |
 | Email-based tenant invites | ❌ Not built (out of MVP scope) |
