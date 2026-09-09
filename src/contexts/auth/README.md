@@ -37,9 +37,8 @@ for the full "one context, or two, or three?" reasoning behind this split.
 | `replacedBySessionId` | `UuidValueObject \| null` | Self-referencing link to this session's successor in the chain |
 
 Methods: `isExpired(now?)`, `revoke(replacedBySessionId)`, `isRevoked()`,
-`markReuseDetected()`. `rotate(hash, expiresAt)` is **deprecated** — kept
-only so `RefreshSessionCommandHandler` keeps compiling until WU-3b removes
-it. No domain events — nothing consumes a session-issued event.
+`markReuseDetected()`. No domain events — nothing consumes a session-issued
+event.
 
 **Session chain model (linked list, not `family_id`).** The `session` table
 no longer enforces `UNIQUE(user_id)`: a user chain is a linked list of
@@ -55,12 +54,13 @@ accepted MVP tradeoff — one chain per user in practice). Unlike
 refresh with the same token is rejected outright, per
 `auth-session-rotation/spec.md`.
 
-The schema/domain/persistence layer above landed in WU-3a. `rotate()`/
-`revokeAllByUserId()` on `ISessionWriteRepository` are not yet called from
-any handler — `RefreshSessionCommandHandler` still mutates the session
-in-place via the deprecated `SessionAggregate.rotate()`. Wiring the locked
-chain rotation and reuse-detection into the live refresh endpoint is WU-3b,
-a follow-up PR stacked on this one.
+`ISessionWriteRepository.rotate()`/`revokeAllByUserId()` are wired into
+`RefreshSessionCommandHandler` (WU-3b): every refresh locks the presented
+row, checks `isRevoked()` first (reuse — invalidates the whole chain and
+401s via `RefreshTokenReuseDetectedException`), then `isExpired()`, then
+rotates. `LoginUserCommandHandler` always creates a brand-new chain-root
+session on every login instead of rotating an existing row in place — a
+user can hold more than one active chain (e.g. multiple devices).
 
 ---
 
@@ -119,9 +119,10 @@ POST /auth/login  ->  LoginUserCommandHandler
                        6. TokenSignService.execute({sub, email, platformAdmin,
                           tenants}) — platformAdmin is the RECONCILED value,
                           never the value read before step 4
-                       7. Generate + hash a new opaque refresh token; find
-                          any existing SessionAggregate for this userId and
-                          rotate it, or create a new one
+                       7. Generate + hash a new opaque refresh token; always
+                          create a brand-new chain-root SessionAggregate
+                          (never rotates an existing row — see "Session
+                          chain model" above)
                        8. Return { accessToken, refreshToken } (JSON body +
                           cookies — see root README)
 ```
@@ -152,19 +153,37 @@ spurious `UserUpdatedEvent`.
 ```
 POST /auth/refresh  ->  RefreshSessionCommandHandler
                          1. Hash the presented raw token
-                         2. ISessionWriteRepository.findByRefreshTokenHash()
-                            (401 if none)
-                         3. 401 + delete the session if expired
-                         4. IUserLookupPort.findById(session.userId) — the
+                         2. ISessionWriteRepository.rotate(hash, callback) —
+                            locks (`SELECT ... FOR UPDATE`) the session row
+                            matching the presented hash inside one
+                            transaction; 401 (InvalidRefreshTokenException)
+                            if no row matches
+                         3. Inside the locked callback:
+                            a. isRevoked()? -> reuse: markReuseDetected(),
+                               revokeAllByUserId(userId) (invalidates the
+                               WHOLE chain), throw
+                               RefreshTokenReuseDetectedException (401) —
+                               no grace window, a concurrent second request
+                               on the same token is always rejected
+                            b. isExpired()? -> InvalidRefreshTokenException
+                               (401)
+                            c. otherwise: build the successor session,
+                               revoke(successor.id) on the current row;
+                               the repository INSERTs the successor BEFORE
+                               UPDATE-ing the predecessor (self-FK ordering)
+                         4. IUserLookupPort.findById(successor.userId) — the
                             session only has a userId, not an email, which
                             is why this find-by-id path exists
-                         5. Same claims-sign + rotate-token steps as login
+                         5. Same claims-sign steps as login; the new opaque
+                            refresh token was generated and hashed before
+                            the locked transaction
 ```
 
-Rotation is unconditional — presenting an already-rotated (or never-issued)
-token always 401s, since the MVP has no reuse-detection grace window (that's
-gardenia's more sophisticated, explicitly-superseded design — see the
-architecture doc).
+A replayed/already-consumed refresh token invalidates every session in its
+chain, including a legitimate holder's never-yet-used successor token — that
+holder must log in again to establish a new chain (see
+`auth-session-rotation/spec.md`'s "Legitimate use after chain invalidation"
+scenario).
 
 ---
 

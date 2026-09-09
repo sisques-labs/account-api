@@ -223,6 +223,77 @@ describe('Session repository (integration)', () => {
     });
   });
 
+  describe('reuse detection (replay of a consumed token invalidates the whole chain)', () => {
+    it('should revoke every session in the chain when a consumed token is replayed, so a still-unused successor also becomes unusable', async () => {
+      const rootHash = '7'.repeat(64);
+      const middleHash = '8'.repeat(64);
+      const leafHash = '9'.repeat(64);
+
+      await sessionWriteRepo.save(
+        buildSession({
+          id: '650e8400-e29b-41d4-a716-446655440040',
+          refreshTokenHash: rootHash,
+        }),
+      );
+
+      // Rotate root -> middle (simulates a normal refresh).
+      await sessionWriteRepo.rotate(rootHash, async (current) => {
+        const now = new Date();
+        const created = sessionBuilder
+          .withId('650e8400-e29b-41d4-a716-446655440041')
+          .withUserId(USER_ID)
+          .withRefreshTokenHash(middleHash)
+          .withExpiresAt(new Date(Date.now() + 1_000_000))
+          .withRevokedAt(null)
+          .withReplacedBySessionId(null)
+          .withCreatedAt(now)
+          .withUpdatedAt(now)
+          .build();
+        current.revoke(created.id);
+        return { revoked: current, created };
+      });
+
+      // Rotate middle -> leaf (the legitimate holder's latest, never-used token).
+      await sessionWriteRepo.rotate(middleHash, async (current) => {
+        const now = new Date();
+        const created = sessionBuilder
+          .withId('650e8400-e29b-41d4-a716-446655440042')
+          .withUserId(USER_ID)
+          .withRefreshTokenHash(leafHash)
+          .withExpiresAt(new Date(Date.now() + 1_000_000))
+          .withRevokedAt(null)
+          .withReplacedBySessionId(null)
+          .withCreatedAt(now)
+          .withUpdatedAt(now)
+          .build();
+        current.revoke(created.id);
+        return { revoked: current, created };
+      });
+
+      // Replay the already-consumed root token — reuse detected.
+      let reuseDetected = false;
+      await expect(
+        sessionWriteRepo.rotate(rootHash, async (current) => {
+          if (current.isRevoked()) {
+            reuseDetected = true;
+            current.markReuseDetected();
+            await sessionWriteRepo.revokeAllByUserId(current.userId.value);
+            throw new Error('reuse detected');
+          }
+          return { revoked: current, created: current };
+        }),
+      ).rejects.toThrow('reuse detected');
+
+      expect(reuseDetected).toBe(true);
+
+      const leaf = await sessionWriteRepo.findByRefreshTokenHash(leafHash);
+      expect(leaf?.isRevoked()).toBe(true);
+
+      const middle = await sessionWriteRepo.findByRefreshTokenHash(middleHash);
+      expect(middle?.isRevoked()).toBe(true);
+    });
+  });
+
   describe('revokeAllByUserId()', () => {
     it('should revoke every non-revoked session for the user', async () => {
       await sessionWriteRepo.save(

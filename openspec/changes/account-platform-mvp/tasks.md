@@ -61,7 +61,7 @@ Chain strategy: pending
 ## Phase 3: WU-3a — Session Chain Domain + Persistence (after WU-2 lands)
 
 - [x] 3.1 Modify `src/contexts/auth/domain/aggregates/session.aggregate.ts` — add `revokedAt`, `replacedBySessionId`, `revoke()`, `isRevoked()`, `markReuseDetected()`; remove in-place `rotate()`.
-  - Deviation: `rotate()` was kept (marked `@deprecated`) instead of removed — removing it requires editing `refresh-session.handler.ts`, a Phase 4/WU-3b file explicitly out of scope for this PR. See apply-progress and PR notes.
+  - Note: in the WU-3a PR, `rotate()` was temporarily kept (marked `@deprecated`) to avoid touching `refresh-session.handler.ts`, a Phase 4/WU-3b file explicitly out of scope for that PR. WU-3b (this PR) migrated the handler to the chain-aware `ISessionWriteRepository.rotate()` and removed the deprecated method, completing the original task 3.1 intent.
 - [x] 3.2 Create `.../domain/interfaces/rotate-session-callback.interface.ts` and `rotate-result.interface.ts` (one type per file).
 - [x] 3.3 Create `.../domain/exceptions/refresh-token-reuse-detected.exception.ts` — maps to 401.
 - [x] 3.4 Modify `.../domain/repositories/write/session-write.repository.ts` — add `rotate()`, `revokeAllByUserId()`.
@@ -75,9 +75,9 @@ Chain strategy: pending
 
 ## Phase 4: WU-3b — Rotation + Reuse-Detection Wiring (depends on WU-3a)
 
-- [ ] 4.1 Modify `.../commands/refresh-session/refresh-session.handler.ts` — rotate through the locked callback. On `revoked_at IS NOT NULL` (replay), call `markReuseDetected()` + `revokeAllByUserId(userId)`, throw `RefreshTokenReuseDetectedException` (401). No reuse grace window — deliberate divergence from gardenia-api.
-- [ ] 4.2 Modify `.../commands/login-user/login-user.handler.ts` — always create a new chain-root session (replaces the old `UNIQUE(user_id)` single-session reuse).
-- [ ] 4.3 RED unit test `refresh-session.handler.spec.ts` — replaying a consumed token invalidates the whole chain and returns 401.
-- [ ] 4.4 Integration test: replay of a consumed token marks every record in the chain invalidated; any other token from the same chain also 401s afterward.
-- [ ] 4.5 E2E: successful rotation; concurrent refresh with the same token; replay after chain invalidation; legitimate holder of the latest never-consumed token rejected post-invalidation and must re-login.
-- [ ] 4.6 Update `src/contexts/auth/README.md`.
+- [x] 4.1 Modify `.../commands/refresh-session/refresh-session.handler.ts` — rotate through the locked callback. On `revoked_at IS NOT NULL` (replay), call `markReuseDetected()` + `revokeAllByUserId(userId)`, throw `RefreshTokenReuseDetectedException` (401). No reuse grace window — deliberate divergence from gardenia-api.
+- [x] 4.2 Modify `.../commands/login-user/login-user.handler.ts` — always create a new chain-root session (replaces the old `UNIQUE(user_id)` single-session reuse).
+- [x] 4.3 RED unit test `refresh-session.handler.spec.ts` — replaying a consumed token invalidates the whole chain and returns 401.
+- [x] 4.4 Integration test: replay of a consumed token marks every record in the chain invalidated; any other token from the same chain also 401s afterward.
+- [x] 4.5 E2E: successful rotation; concurrent refresh with the same token; replay after chain invalidation; legitimate holder of the latest never-consumed token rejected post-invalidation and must re-login.
+- [x] 4.6 Update `src/contexts/auth/README.md`.
