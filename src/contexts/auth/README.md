@@ -96,13 +96,44 @@ POST /auth/login  ->  LoginUserCommandHandler
                        2. IUserLookupPort.findByEmail() — local user lookup
                        3. ITenantMembershipLookupPort.findMembershipsByUserId()
                           -> tenant/role claims for the JWT
-                       4. TokenSignService.execute({sub, email, platformAdmin, tenants})
-                       5. Generate + hash a new opaque refresh token; find
+                       4. ReconcilePlatformAdminService.execute({email,
+                          currentPlatformAdmin, platformAdminEmails}) — pure
+                          function of PLATFORM_ADMIN_EMAILS (config); returns
+                          null when the var is unset or no change is needed,
+                          otherwise the reconciled boolean
+                       5. IF non-null: IUserPlatformAdminPort.setPlatformAdmin()
+                          -> dispatches SetUserPlatformAdminCommand into
+                             `user` (via CommandBus)
+                       6. TokenSignService.execute({sub, email, platformAdmin,
+                          tenants}) — platformAdmin is the RECONCILED value,
+                          never the value read before step 4
+                       7. Generate + hash a new opaque refresh token; find
                           any existing SessionAggregate for this userId and
                           rotate it, or create a new one
-                       6. Return { accessToken, refreshToken } (JSON body +
+                       8. Return { accessToken, refreshToken } (JSON body +
                           cookies — see root README)
 ```
+
+### `PLATFORM_ADMIN_EMAILS` reconciliation (platform-admin-bootstrap)
+
+Every login reconciles the authenticating user's `platformAdmin` flag
+against `PLATFORM_ADMIN_EMAILS` — see
+`openspec/changes/account-platform-mvp/specs/platform-admin-bootstrap/spec.md`
+for the full requirement. Tri-state handling, computed once in
+`authConfig` (`src/core/config/auth.config.ts`):
+
+| `PLATFORM_ADMIN_EMAILS` | `authConfig().platformAdminEmails` | Effect |
+|---|---|---|
+| unset (absent from `process.env`) | `null` | Skip reconciliation entirely — existing flags untouched |
+| `""` (set, empty) | `[]` | Revoke every currently-granted admin |
+| `"a@x.com,b@x.com"` | `['a@x.com', 'b@x.com']` (trimmed + lowercased) | Grant listed emails, revoke everyone else |
+
+`ReconcilePlatformAdminService` is a pure function — it never reads
+`ConfigService` or dispatches anything itself; `LoginUserCommandHandler`
+reads the config value and owns the dispatch decision. `user`'s
+`SetUserPlatformAdminCommandHandler` adds a second, independent no-op
+short-circuit (see `user`'s README) so a redundant dispatch never emits a
+spurious `UserUpdatedEvent`.
 
 ## How refresh works
 
@@ -140,7 +171,9 @@ Claims are a snapshot at sign time — creating a tenant or being added as a
 member doesn't retroactively update an already-issued access token; the
 change shows up on the next login/refresh (minutes, by design — see the
 architecture doc's rationale for short-lived tokens + refresh over a
-call-on-every-request model).
+call-on-every-request model). `platformAdmin` specifically reflects the
+value AFTER that login's `PLATFORM_ADMIN_EMAILS` reconciliation (see
+"How login works" above) — never the value read before it.
 
 ---
 
@@ -152,6 +185,7 @@ call-on-every-request model).
 | `ITenantMembershipLookupPort` (`findMembershipsByUserId`) | `TenantMembershipLookupAdapter` | `TenantMembershipFindByUserIdQuery` (tenancy, via `QueryBus`) | login, refresh (JWT claims) |
 | `IUserLookupPort` (`findByEmail` / `findById`) | `UserLookupAdapter` | `UserFindByEmailQuery` / `UserFindByIdQuery` (user, via `QueryBus`) | register (pre-check), login, refresh |
 | `IUserProvisioningPort` (`createUser`) | `UserProvisioningAdapter` | `CreateUserCommand` (user, via `CommandBus`) | register |
+| `IUserPlatformAdminPort` (`setPlatformAdmin`) | `UserPlatformAdminAdapter` | `SetUserPlatformAdminCommand` (user, via `CommandBus`) | login (`PLATFORM_ADMIN_EMAILS` reconciliation) |
 
 `IIdentityProviderPort` is shaped so a second adapter (e.g. Cognito) could
 implement it later without touching `application`/`domain` — but per YAGNI,
@@ -192,6 +226,7 @@ no second adapter is built now.
 | `JWT_PRIVATE_KEY` | unset (ephemeral dev keypair) | Base64-encoded RSA private key PEM; signs access tokens (RS256). Required in production — see `src/core/config/env.validation.ts` |
 | `JWT_EXPIRES_IN` | `15m` | Access token TTL |
 | `REFRESH_TOKEN_TTL_DAYS` | `30` | Opaque refresh token TTL |
+| `PLATFORM_ADMIN_EMAILS` | unset (`null` — reconciliation skipped) | Comma-separated allowlist, trimmed + lowercased. `""` revokes every admin; see "PLATFORM_ADMIN_EMAILS reconciliation" above |
 | `COOKIE_DOMAIN` | unset | `.sisqueslabs.com` in production once apps share the domain |
 | `KEYCLOAK_BASE_URL` | `http://localhost:8084` | Shared Keycloak instance from `local-dev-stack` |
 | `KEYCLOAK_REALM` | `sisques-account` | |

@@ -1,6 +1,19 @@
 import { resolveSigningKeyPair } from '@core/security/keys/resolve-signing-key-pair';
 import { registerAs } from '@nestjs/config';
 
+// `undefined` (var absent from process.env) MUST stay distinguishable from
+// an explicit empty string: absent means "skip reconciliation entirely",
+// empty means "revoke every platform admin". See
+// specs/platform-admin-bootstrap/spec.md.
+function parsePlatformAdminEmails(raw: string | undefined): string[] | null {
+  if (raw === undefined) return null;
+
+  return raw
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter((email) => email.length > 0);
+}
+
 export const authConfig = registerAs('auth', () => {
   const signingKeyPair = resolveSigningKeyPair({
     JWT_PRIVATE_KEY: process.env.JWT_PRIVATE_KEY,
@@ -17,6 +30,9 @@ export const authConfig = registerAs('auth', () => {
       10,
     ),
     cookieDomain: process.env.COOKIE_DOMAIN,
+    platformAdminEmails: parsePlatformAdminEmails(
+      process.env.PLATFORM_ADMIN_EMAILS,
+    ),
     keycloak: {
       baseUrl: process.env.KEYCLOAK_BASE_URL ?? 'http://localhost:8084',
       realm: process.env.KEYCLOAK_REALM ?? 'sisques-account',

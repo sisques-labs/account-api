@@ -79,4 +79,33 @@ describe('authConfig', () => {
 
     expect(config.jwtSecret).toBeUndefined();
   });
+
+  it('resolves platformAdminEmails to null when PLATFORM_ADMIN_EMAILS is unset', () => {
+    delete process.env.PLATFORM_ADMIN_EMAILS;
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toBeNull();
+  });
+
+  it('resolves platformAdminEmails to an empty array when PLATFORM_ADMIN_EMAILS is an empty string', () => {
+    process.env.PLATFORM_ADMIN_EMAILS = '';
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toEqual([]);
+  });
+
+  it('trims and lowercases a comma-separated PLATFORM_ADMIN_EMAILS list', () => {
+    process.env.PLATFORM_ADMIN_EMAILS =
+      ' Admin@Example.com , second@EXAMPLE.com ,,third@example.com';
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toEqual([
+      'admin@example.com',
+      'second@example.com',
+      'third@example.com',
+    ]);
+  });
 });

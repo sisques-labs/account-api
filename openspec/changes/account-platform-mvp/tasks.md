@@ -43,20 +43,20 @@ Chain strategy: pending
 
 ## Phase 2: WU-2 — Platform Admin Bootstrap (land before WU-3)
 
-- [ ] 2.1 Modify `src/core/config/auth.config.ts` — add `platformAdminEmails: string[] | null`, trimmed + lowercased at load.
-- [ ] 2.2 Create `src/contexts/user/application/services/write/assert-user-exists/assert-user-exists.service.ts`.
-- [ ] 2.3 Create `src/contexts/user/application/commands/set-user-platform-admin/set-user-platform-admin.command.ts` + `.handler.ts` — `user.update({ platformAdmin })`.
-- [ ] 2.4 Create `src/contexts/auth/application/ports/user-platform-admin.port.ts` — `IUserPlatformAdminPort` + `USER_PLATFORM_ADMIN_PORT`.
-- [ ] 2.5 Create `src/contexts/auth/infrastructure/adapters/user-platform-admin.adapter.ts` — `CommandBus` dispatch only; no direct cross-context import.
-- [ ] 2.6 Create `.../services/write/reconcile-platform-admin/reconcile-platform-admin.service.ts` — returns `boolean | null`.
+- [x] 2.1 Modify `src/core/config/auth.config.ts` — add `platformAdminEmails: string[] | null`, trimmed + lowercased at load.
+- [x] 2.2 Create `src/contexts/user/application/services/write/assert-user-exists/assert-user-exists.service.ts`.
+- [x] 2.3 Create `src/contexts/user/application/commands/set-user-platform-admin/set-user-platform-admin.command.ts` + `.handler.ts` — `user.update({ platformAdmin })`.
+- [x] 2.4 Create `src/contexts/auth/application/ports/user-platform-admin.port.ts` — `IUserPlatformAdminPort` + `USER_PLATFORM_ADMIN_PORT`.
+- [x] 2.5 Create `src/contexts/auth/infrastructure/adapters/user-platform-admin.adapter.ts` — `CommandBus` dispatch only; no direct cross-context import.
+- [x] 2.6 Create `.../services/write/reconcile-platform-admin/reconcile-platform-admin.service.ts` — returns `boolean | null`.
   - Acceptance: `PLATFORM_ADMIN_EMAILS` **undefined** (absent from `process.env`) → return `null`, skip reconciliation entirely, no port dispatch, existing flag untouched.
   - Acceptance: `PLATFORM_ADMIN_EMAILS` **empty string** → parses to `[]`; if current flag is `true`, revoke to `false`; if already `false`, no-op.
   - Acceptance: `PLATFORM_ADMIN_EMAILS` **populated** → grant `true` when email present and flag not already `true`; revoke `false` when flag `true` and email now absent; no-op otherwise.
-- [ ] 2.7 Modify `.../commands/login-user/login-user.handler.ts` — call reconcile service after auth success; sign token claims with the **reconciled** boolean, never the pre-reconciliation value.
-- [ ] 2.8 RED unit test `reconcile-platform-admin.service.spec.ts` — full truth table: {undefined, empty, populated} × {email present, absent} × {flag true, false}.
-- [ ] 2.9 RED unit test `set-user-platform-admin.handler.spec.ts` — no-op short-circuit when flag unchanged.
-- [ ] 2.10 E2E: `PLATFORM_ADMIN_EMAILS` grants on login, then revokes on a second login after email removal.
-- [ ] 2.11 Update `src/contexts/user/README.md`, `src/contexts/auth/README.md`, `docs/integration-guide.md`.
+- [x] 2.7 Modify `.../commands/login-user/login-user.handler.ts` — call reconcile service after auth success; sign token claims with the **reconciled** boolean, never the pre-reconciliation value.
+- [x] 2.8 RED unit test `reconcile-platform-admin.service.spec.ts` — full truth table: {undefined, empty, populated} × {email present, absent} × {flag true, false}.
+- [x] 2.9 RED unit test `set-user-platform-admin.handler.spec.ts` — no-op short-circuit when flag unchanged.
+- [x] 2.10 E2E: `PLATFORM_ADMIN_EMAILS` grants on login, then revokes on a second login after email removal.
+- [x] 2.11 Update `src/contexts/user/README.md`, `src/contexts/auth/README.md`, `docs/integration-guide.md`.
 
 ## Phase 3: WU-3a — Session Chain Domain + Persistence (after WU-2 lands)
 
