@@ -1,6 +1,13 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.1.2] - 2026-09-04
+
+### Documentation
+- Add consumer-app integration guide (afa17d1)
+
+### Features
+- **core:** Wire KurrentDB domain-event forwarding (f03faa7)
 ## [0.1.1] - 2026-09-03
 
 ### Chore

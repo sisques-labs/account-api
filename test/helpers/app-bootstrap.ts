@@ -1,4 +1,8 @@
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
@@ -24,7 +28,7 @@ export async function createE2EApp(): Promise<E2EContext> {
 
   const app = moduleFixture.createNestApplication();
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: ['.well-known/jwks.json'] });
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',

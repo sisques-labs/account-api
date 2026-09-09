@@ -151,6 +151,72 @@ describe('Identity + Tenancy (e2e)', () => {
     expect(secondAttempt.status).toBe(401);
   });
 
+  it('should reject exactly one of two concurrent refresh requests carrying the same token', async () => {
+    const email = uniqueEmail('concurrent-refresh');
+    const password = 'Sup3rStrongPassw0rd!';
+    await ctx.http().post('/api/v1/auth/register').send({
+      email,
+      password,
+      displayName: 'Concurrent Refresh User',
+    });
+    const login = await ctx
+      .http()
+      .post('/api/v1/auth/login')
+      .send({ email, password });
+
+    const [first, second] = await Promise.all([
+      ctx
+        .http()
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: login.body.refreshToken }),
+      ctx
+        .http()
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: login.body.refreshToken }),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([200, 401]);
+  });
+
+  it('should invalidate the whole chain on replay, rejecting even the never-yet-used successor token', async () => {
+    const email = uniqueEmail('chain-invalidation');
+    const password = 'Sup3rStrongPassw0rd!';
+    await ctx.http().post('/api/v1/auth/register').send({
+      email,
+      password,
+      displayName: 'Chain Invalidation User',
+    });
+    const login = await ctx
+      .http()
+      .post('/api/v1/auth/login')
+      .send({ email, password });
+
+    // Rotate once legitimately: root -> successor.
+    const firstRefresh = await ctx
+      .http()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: login.body.refreshToken });
+    expect(firstRefresh.status).toBe(200);
+    const successorRefreshToken = firstRefresh.body.refreshToken as string;
+
+    // Replay the already-consumed root token — reuse detected, whole
+    // chain (including the never-yet-used successor) is invalidated.
+    const replay = await ctx
+      .http()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: login.body.refreshToken });
+    expect(replay.status).toBe(401);
+
+    // The legitimate holder of the latest, never-consumed token is now
+    // also rejected — they must log in again to establish a new chain.
+    const legitimateHolderAttempt = await ctx
+      .http()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: successorRefreshToken });
+    expect(legitimateHolderAttempt.status).toBe(401);
+  });
+
   describe('full flow: register -> login -> create app -> create tenant -> add member -> list members', () => {
     it('walks the whole MVP flow end to end', async () => {
       // 1. Register + login the tenant creator.
@@ -186,6 +252,17 @@ describe('Identity + Tenancy (e2e)', () => {
       expect(tenantRes.status).toBe(201);
       const tenantId = tenantRes.text;
 
+      // 3b. Tenant creation doesn't reissue the caller's access token, so
+      // its `tenants` claim is still stale (missing the OWNER membership
+      // just created) — refresh the session to pick it up before calling
+      // any TenantPermissionGuard-protected endpoint below (see
+      // `tenant-permission.guard.ts` / design.md "stale role" risk).
+      const ownerRefresh = await ctx
+        .http()
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: ownerLogin.body.refreshToken });
+      const refreshedOwnerToken = ownerRefresh.body.accessToken as string;
+
       // 4. Register a second user to add as a member.
       const memberEmail = uniqueEmail('member');
       await ctx.http().post('/api/v1/auth/register').send({
@@ -198,7 +275,7 @@ describe('Identity + Tenancy (e2e)', () => {
       const addMemberRes = await ctx
         .http()
         .post(`/api/v1/tenants/${tenantId}/members`)
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Authorization', `Bearer ${refreshedOwnerToken}`)
         .send({ email: memberEmail, role: 'MEMBER' });
       expect(addMemberRes.status).toBe(201);
       expect(addMemberRes.body.role).toBe('MEMBER');
@@ -207,7 +284,7 @@ describe('Identity + Tenancy (e2e)', () => {
       const listRes = await ctx
         .http()
         .get(`/api/v1/tenants/${tenantId}/members`)
-        .set('Authorization', `Bearer ${ownerToken}`);
+        .set('Authorization', `Bearer ${refreshedOwnerToken}`);
       expect(listRes.status).toBe(200);
       expect(listRes.body).toHaveLength(2);
       const roles = listRes.body.map((m: { role: string }) => m.role).sort();
@@ -217,7 +294,7 @@ describe('Identity + Tenancy (e2e)', () => {
       const dupMemberRes = await ctx
         .http()
         .post(`/api/v1/tenants/${tenantId}/members`)
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Authorization', `Bearer ${refreshedOwnerToken}`)
         .send({ email: memberEmail, role: 'MEMBER' });
       expect(dupMemberRes.status).toBe(409);
     });
@@ -248,10 +325,17 @@ describe('Identity + Tenancy (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ appId: appRes.text, name: 'Tenant' });
 
+    // Refresh so the OWNER membership just created is visible to the guard.
+    const refresh = await ctx
+      .http()
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: login.body.refreshToken });
+    const refreshedToken = refresh.body.accessToken as string;
+
     const res = await ctx
       .http()
       .post(`/api/v1/tenants/${tenantRes.text}/members`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${refreshedToken}`)
       .send({ email: 'does-not-exist@example.com', role: 'MEMBER' });
 
     expect(res.status).toBe(404);

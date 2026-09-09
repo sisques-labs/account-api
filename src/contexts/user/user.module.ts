@@ -1,7 +1,9 @@
 import { CreateUserCommandHandler } from '@contexts/user/application/commands/create-user/create-user.handler';
+import { SetUserPlatformAdminCommandHandler } from '@contexts/user/application/commands/set-user-platform-admin/set-user-platform-admin.handler';
 import { UserFindByEmailQueryHandler } from '@contexts/user/application/queries/user-find-by-email/user-find-by-email.handler';
 import { UserFindByIdQueryHandler } from '@contexts/user/application/queries/user-find-by-id/user-find-by-id.handler';
 import { AssertUserEmailAvailableService } from '@contexts/user/application/services/write/assert-user-email-available/assert-user-email-available.service';
+import { AssertUserExistsService } from '@contexts/user/application/services/write/assert-user-exists/assert-user-exists.service';
 import { UserBuilder } from '@contexts/user/domain/builders/user.builder';
 import { USER_READ_REPOSITORY } from '@contexts/user/domain/repositories/read/user-read.repository';
 import { USER_WRITE_REPOSITORY } from '@contexts/user/domain/repositories/write/user-write.repository';
@@ -13,11 +15,17 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-const COMMAND_HANDLERS = [CreateUserCommandHandler];
+const COMMAND_HANDLERS = [
+  CreateUserCommandHandler,
+  SetUserPlatformAdminCommandHandler,
+];
 
 const QUERY_HANDLERS = [UserFindByEmailQueryHandler, UserFindByIdQueryHandler];
 
-const APPLICATION_SERVICES = [AssertUserEmailAvailableService];
+const APPLICATION_SERVICES = [
+  AssertUserEmailAvailableService,
+  AssertUserExistsService,
+];
 
 const DOMAIN_BUILDERS = [UserBuilder];
 
