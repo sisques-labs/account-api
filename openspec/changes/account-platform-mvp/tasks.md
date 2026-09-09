@@ -60,23 +60,24 @@ Chain strategy: pending
 
 ## Phase 3: WU-3a — Session Chain Domain + Persistence (after WU-2 lands)
 
-- [ ] 3.1 Modify `src/contexts/auth/domain/aggregates/session.aggregate.ts` — add `revokedAt`, `replacedBySessionId`, `revoke()`, `isRevoked()`, `markReuseDetected()`; remove in-place `rotate()`.
-- [ ] 3.2 Create `.../domain/interfaces/rotate-session-callback.interface.ts` and `rotate-result.interface.ts` (one type per file).
-- [ ] 3.3 Create `.../domain/exceptions/refresh-token-reuse-detected.exception.ts` — maps to 401.
-- [ ] 3.4 Modify `.../domain/repositories/write/session-write.repository.ts` — add `rotate()`, `revokeAllByUserId()`.
-- [ ] 3.5 Modify TypeORM `session.entity.ts` — drop `UQ_session_user_id`; add nullable `revoked_at`, `replaced_by_session_id` self-FK `ON DELETE SET NULL`; non-unique `IDX_session_user_id`; keep `UQ_session_refresh_token_hash`.
-- [ ] 3.6 Modify TypeORM mapper + write repository implementation — `rotate()` runs in one transaction using `pessimistic_write` (`SELECT ... FOR UPDATE`).
+- [x] 3.1 Modify `src/contexts/auth/domain/aggregates/session.aggregate.ts` — add `revokedAt`, `replacedBySessionId`, `revoke()`, `isRevoked()`, `markReuseDetected()`; remove in-place `rotate()`.
+  - Note: in the WU-3a PR, `rotate()` was temporarily kept (marked `@deprecated`) to avoid touching `refresh-session.handler.ts`, a Phase 4/WU-3b file explicitly out of scope for that PR. WU-3b (this PR) migrated the handler to the chain-aware `ISessionWriteRepository.rotate()` and removed the deprecated method, completing the original task 3.1 intent.
+- [x] 3.2 Create `.../domain/interfaces/rotate-session-callback.interface.ts` and `rotate-result.interface.ts` (one type per file).
+- [x] 3.3 Create `.../domain/exceptions/refresh-token-reuse-detected.exception.ts` — maps to 401.
+- [x] 3.4 Modify `.../domain/repositories/write/session-write.repository.ts` — add `rotate()`, `revokeAllByUserId()`.
+- [x] 3.5 Modify TypeORM `session.entity.ts` — drop `UQ_session_user_id`; add nullable `revoked_at`, `replaced_by_session_id` self-FK `ON DELETE SET NULL`; non-unique `IDX_session_user_id`; keep `UQ_session_refresh_token_hash`.
+- [x] 3.6 Modify TypeORM mapper + write repository implementation — `rotate()` runs in one transaction using `pessimistic_write` (`SELECT ... FOR UPDATE`).
   - Acceptance: within the locked transaction, INSERT the successor session row **before** UPDATE-ing the current row's `revoked_at`/`replaced_by_session_id`. The self-FK rejects a reference to a not-yet-existing row — this is gardenia-api's own documented bug; do not repeat it.
-- [ ] 3.7 Create `src/database/migrations/{ts}-SessionChainRotation.ts` — `up()`: `DELETE FROM "session"` → drop `UQ_session_user_id` → add nullable columns → self-FK → non-unique index. `down()` reverses and re-deletes rows (never session-preserving either direction).
-- [ ] 3.8 RED unit test `session.aggregate.spec.ts` — `revoke`/`isRevoked` state transitions.
-- [ ] 3.9 Integration test: concurrent rotation on the same token yields exactly one successful pair; the other finds the token already consumed.
-- [ ] 3.10 Integration test: migration `up`/`down` round-trip against real Postgres.
+- [x] 3.7 Create `src/database/migrations/{ts}-SessionChainRotation.ts` — `up()`: `DELETE FROM "session"` → drop `UQ_session_user_id` → add nullable columns → self-FK → non-unique index. `down()` reverses and re-deletes rows (never session-preserving either direction).
+- [x] 3.8 RED unit test `session.aggregate.spec.ts` — `revoke`/`isRevoked` state transitions.
+- [x] 3.9 Integration test: concurrent rotation on the same token yields exactly one successful pair; the other finds the token already consumed.
+- [x] 3.10 Integration test: migration `up`/`down` round-trip against real Postgres.
 
 ## Phase 4: WU-3b — Rotation + Reuse-Detection Wiring (depends on WU-3a)
 
-- [ ] 4.1 Modify `.../commands/refresh-session/refresh-session.handler.ts` — rotate through the locked callback. On `revoked_at IS NOT NULL` (replay), call `markReuseDetected()` + `revokeAllByUserId(userId)`, throw `RefreshTokenReuseDetectedException` (401). No reuse grace window — deliberate divergence from gardenia-api.
-- [ ] 4.2 Modify `.../commands/login-user/login-user.handler.ts` — always create a new chain-root session (replaces the old `UNIQUE(user_id)` single-session reuse).
-- [ ] 4.3 RED unit test `refresh-session.handler.spec.ts` — replaying a consumed token invalidates the whole chain and returns 401.
-- [ ] 4.4 Integration test: replay of a consumed token marks every record in the chain invalidated; any other token from the same chain also 401s afterward.
-- [ ] 4.5 E2E: successful rotation; concurrent refresh with the same token; replay after chain invalidation; legitimate holder of the latest never-consumed token rejected post-invalidation and must re-login.
-- [ ] 4.6 Update `src/contexts/auth/README.md`.
+- [x] 4.1 Modify `.../commands/refresh-session/refresh-session.handler.ts` — rotate through the locked callback. On `revoked_at IS NOT NULL` (replay), call `markReuseDetected()` + `revokeAllByUserId(userId)`, throw `RefreshTokenReuseDetectedException` (401). No reuse grace window — deliberate divergence from gardenia-api.
+- [x] 4.2 Modify `.../commands/login-user/login-user.handler.ts` — always create a new chain-root session (replaces the old `UNIQUE(user_id)` single-session reuse).
+- [x] 4.3 RED unit test `refresh-session.handler.spec.ts` — replaying a consumed token invalidates the whole chain and returns 401.
+- [x] 4.4 Integration test: replay of a consumed token marks every record in the chain invalidated; any other token from the same chain also 401s afterward.
+- [x] 4.5 E2E: successful rotation; concurrent refresh with the same token; replay after chain invalidation; legitimate holder of the latest never-consumed token rejected post-invalidation and must re-login.
+- [x] 4.6 Update `src/contexts/auth/README.md`.

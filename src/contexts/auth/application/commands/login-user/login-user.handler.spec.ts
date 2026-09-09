@@ -53,6 +53,8 @@ describe('LoginUserCommandHandler', () => {
       findByRefreshTokenHash: jest.fn(),
       findById: jest.fn(),
       findByCriteria: jest.fn(),
+      rotate: jest.fn(),
+      revokeAllByUserId: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
     };
@@ -145,7 +147,6 @@ describe('LoginUserCommandHandler', () => {
       externalId: 'kc-sub-1',
     });
     userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
-    sessionWriteRepository.findByUserId.mockResolvedValue(null);
     sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
@@ -160,21 +161,12 @@ describe('LoginUserCommandHandler', () => {
     expect(savedSession.refreshTokenHash.value).toBe('b'.repeat(64));
   });
 
-  it('should rotate the existing session when the user already has one', async () => {
+  it('should always create a brand-new chain-root session, even when the user already has an active one', async () => {
     identityProviderPort.verifyCredentials.mockResolvedValue({
       externalId: 'kc-sub-1',
     });
     userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
-    const existingSession = new SessionBuilder()
-      .withId('a1a1a1a1-e29b-41d4-a716-446655440000')
-      .withUserId(USER_LOOKUP_RESULT.userId)
-      .withRefreshTokenHash('a'.repeat(64))
-      .withExpiresAt(new Date(Date.now() + 1_000_000))
-      .withCreatedAt(new Date('2024-01-01'))
-      .withUpdatedAt(new Date('2024-01-01'))
-      .build();
-    sessionWriteRepository.findByUserId.mockResolvedValue(existingSession);
-    sessionWriteRepository.save.mockResolvedValue(existingSession);
+    sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
     generateRefreshTokenService.execute.mockResolvedValue('raw-refresh-token');
@@ -182,8 +174,12 @@ describe('LoginUserCommandHandler', () => {
 
     await handler.execute(command);
 
-    expect(sessionWriteRepository.save).toHaveBeenCalledWith(existingSession);
-    expect(existingSession.refreshTokenHash.value).toBe('c'.repeat(64));
+    expect(sessionWriteRepository.findByUserId).not.toHaveBeenCalled();
+    expect(sessionWriteRepository.save).toHaveBeenCalledTimes(1);
+    const savedSession = sessionWriteRepository.save.mock.calls[0][0];
+    expect(savedSession.userId.value).toBe(USER_LOOKUP_RESULT.userId);
+    expect(savedSession.refreshTokenHash.value).toBe('c'.repeat(64));
+    expect(savedSession.isRevoked()).toBe(false);
   });
 
   describe('platform-admin reconciliation', () => {

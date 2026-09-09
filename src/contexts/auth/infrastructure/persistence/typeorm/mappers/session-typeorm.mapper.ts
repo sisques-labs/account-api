@@ -13,6 +13,8 @@ export class SessionTypeOrmMapper {
       .withUserId(entity.userId)
       .withRefreshTokenHash(entity.refreshTokenHash)
       .withExpiresAt(entity.refreshTokenExpiresAt)
+      .withRevokedAt(entity.revokedAt)
+      .withReplacedBySessionId(entity.replacedBySessionId)
       .withCreatedAt(entity.createdAt)
       .withUpdatedAt(entity.updatedAt)
       .build();
@@ -25,6 +27,8 @@ export class SessionTypeOrmMapper {
     entity.userId = primitives.userId;
     entity.refreshTokenHash = primitives.refreshTokenHash;
     entity.refreshTokenExpiresAt = primitives.expiresAt;
+    entity.revokedAt = primitives.revokedAt;
+    entity.replacedBySessionId = primitives.replacedBySessionId;
     entity.createdAt = primitives.createdAt;
     entity.updatedAt = primitives.updatedAt;
     return entity;

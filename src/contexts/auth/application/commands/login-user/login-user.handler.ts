@@ -110,26 +110,24 @@ export class LoginUserCommandHandler implements ICommandHandler<LoginUserCommand
       Date.now() + refreshTokenTtlDays * 24 * 60 * 60 * 1000,
     );
 
-    // MVP simplification: one active session per user — rotate the
-    // existing row in place instead of creating a second one.
-    const existingSession = await this.sessionWriteRepository.findByUserId(
-      user.userId,
-    );
-    if (existingSession) {
-      existingSession.rotate(refreshTokenHash, expiresAt);
-      await this.sessionWriteRepository.save(existingSession);
-    } else {
-      const now = new Date();
-      const session = this.sessionBuilder
-        .withId(UuidValueObject.generate().value)
-        .withUserId(user.userId)
-        .withRefreshTokenHash(refreshTokenHash)
-        .withExpiresAt(expiresAt)
-        .withCreatedAt(now)
-        .withUpdatedAt(now)
-        .build();
-      await this.sessionWriteRepository.save(session);
-    }
+    // Every login starts a brand-new chain root (no more `UNIQUE(user_id)`
+    // single-session reuse) — see `auth-session-rotation/spec.md` and
+    // design.md's Session Chain Shape decision. A user can hold more than
+    // one active chain (e.g. multiple devices); reuse detection on any one
+    // of them revokes only that chain's user-scoped rows via
+    // `revokeAllByUserId`, an accepted MVP tradeoff.
+    const now = new Date();
+    const session = this.sessionBuilder
+      .withId(UuidValueObject.generate().value)
+      .withUserId(user.userId)
+      .withRefreshTokenHash(refreshTokenHash)
+      .withExpiresAt(expiresAt)
+      .withRevokedAt(null)
+      .withReplacedBySessionId(null)
+      .withCreatedAt(now)
+      .withUpdatedAt(now)
+      .build();
+    await this.sessionWriteRepository.save(session);
 
     this.logger.log(`User logged in: ${user.userId}`);
 

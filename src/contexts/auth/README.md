@@ -14,7 +14,7 @@
 - **JWT issuance** — Sisques Account signs its OWN access token (never a
   Keycloak-issued one).
 - **Sessions** — the opaque refresh token, as its own `SessionAggregate`
-  (see below), one per user.
+  (see below), chained across rotations.
 
 What it does **not** own: the user's profile fields (`email`, `displayName`,
 `platformAdmin`) — that's the `user` context. It also doesn't own tenants,
@@ -33,22 +33,34 @@ for the full "one context, or two, or three?" reasoning behind this split.
 | `userId` | `UuidValueObject` | FK to `user.id` — deliberately the generic nestjs-kit VO, not `user`'s `UserIdValueObject` (cross-context domain imports are only legal from `infrastructure/adapters/`) |
 | `refreshTokenHash` | `RefreshTokenHashValueObject` | SHA-256 hex of the current opaque refresh token |
 | `expiresAt` | `DateValueObject` | |
+| `revokedAt` | `DateValueObject \| null` | Set once this token is consumed (rotated or reuse-detected); `null` while active |
+| `replacedBySessionId` | `UuidValueObject \| null` | Self-referencing link to this session's successor in the chain |
 
-Methods: `rotate(hash, expiresAt)`, `isExpired(now?)`. No domain events —
-nothing consumes a session-issued event.
+Methods: `isExpired(now?)`, `revoke(replacedBySessionId)`, `isRevoked()`,
+`markReuseDetected()`. No domain events — nothing consumes a session-issued
+event.
 
-**MVP simplification — single active session per user.** The architecture
-doc's schema section lists only 4 tables (`app`, `user`, `tenant`,
-`tenant_membership`) — no session table. This context adds a 5th
-(`session`, `UNIQUE(user_id)`) rather than storing the refresh token
-directly on `user`, but keeps the same MVP behavior: a new login or refresh
-**rotates the existing row in place** instead of creating a second one, so
-only the most recent session stays valid. A real multi-device session model
-(reuse detection, per-device revocation — see `gardenia-api`'s
-`contexts/auth` for what that looks like) is the natural next step post-MVP
-if multi-device support is needed; the table already being separate from
-`user` is what makes that a schema change local to `auth` when the time
-comes.
+**Session chain model (linked list, not `family_id`).** The `session` table
+no longer enforces `UNIQUE(user_id)`: a user chain is a linked list of
+`SessionAggregate` rows, `replaced_by_session_id`-linked (self FK,
+`ON DELETE SET NULL`). Each rotation locks the presented row
+(`pessimistic_write`), INSERTs the successor **before** UPDATE-ing the
+predecessor's `revoked_at`/`replaced_by_session_id` (the self-FK rejects a
+reference to a row that doesn't exist yet — `gardenia-api`'s own documented
+ordering bug). Reuse of an already-revoked token invalidates the whole chain
+via `revokeAllByUserId` (over-revocation of a user's other chains is an
+accepted MVP tradeoff — one chain per user in practice). Unlike
+`gardenia-api`, there is **no reuse grace window**: a second concurrent
+refresh with the same token is rejected outright, per
+`auth-session-rotation/spec.md`.
+
+`ISessionWriteRepository.rotate()`/`revokeAllByUserId()` are wired into
+`RefreshSessionCommandHandler` (WU-3b): every refresh locks the presented
+row, checks `isRevoked()` first (reuse — invalidates the whole chain and
+401s via `RefreshTokenReuseDetectedException`), then `isExpired()`, then
+rotates. `LoginUserCommandHandler` always creates a brand-new chain-root
+session on every login instead of rotating an existing row in place — a
+user can hold more than one active chain (e.g. multiple devices).
 
 ---
 
@@ -107,9 +119,10 @@ POST /auth/login  ->  LoginUserCommandHandler
                        6. TokenSignService.execute({sub, email, platformAdmin,
                           tenants}) — platformAdmin is the RECONCILED value,
                           never the value read before step 4
-                       7. Generate + hash a new opaque refresh token; find
-                          any existing SessionAggregate for this userId and
-                          rotate it, or create a new one
+                       7. Generate + hash a new opaque refresh token; always
+                          create a brand-new chain-root SessionAggregate
+                          (never rotates an existing row — see "Session
+                          chain model" above)
                        8. Return { accessToken, refreshToken } (JSON body +
                           cookies — see root README)
 ```
@@ -140,19 +153,37 @@ spurious `UserUpdatedEvent`.
 ```
 POST /auth/refresh  ->  RefreshSessionCommandHandler
                          1. Hash the presented raw token
-                         2. ISessionWriteRepository.findByRefreshTokenHash()
-                            (401 if none)
-                         3. 401 + delete the session if expired
-                         4. IUserLookupPort.findById(session.userId) — the
+                         2. ISessionWriteRepository.rotate(hash, callback) —
+                            locks (`SELECT ... FOR UPDATE`) the session row
+                            matching the presented hash inside one
+                            transaction; 401 (InvalidRefreshTokenException)
+                            if no row matches
+                         3. Inside the locked callback:
+                            a. isRevoked()? -> reuse: markReuseDetected(),
+                               revokeAllByUserId(userId) (invalidates the
+                               WHOLE chain), throw
+                               RefreshTokenReuseDetectedException (401) —
+                               no grace window, a concurrent second request
+                               on the same token is always rejected
+                            b. isExpired()? -> InvalidRefreshTokenException
+                               (401)
+                            c. otherwise: build the successor session,
+                               revoke(successor.id) on the current row;
+                               the repository INSERTs the successor BEFORE
+                               UPDATE-ing the predecessor (self-FK ordering)
+                         4. IUserLookupPort.findById(successor.userId) — the
                             session only has a userId, not an email, which
                             is why this find-by-id path exists
-                         5. Same claims-sign + rotate-token steps as login
+                         5. Same claims-sign steps as login; the new opaque
+                            refresh token was generated and hashed before
+                            the locked transaction
 ```
 
-Rotation is unconditional — presenting an already-rotated (or never-issued)
-token always 401s, since the MVP has no reuse-detection grace window (that's
-gardenia's more sophisticated, explicitly-superseded design — see the
-architecture doc).
+A replayed/already-consumed refresh token invalidates every session in its
+chain, including a legitimate holder's never-yet-used successor token — that
+holder must log in again to establish a new chain (see
+`auth-session-rotation/spec.md`'s "Legitimate use after chain invalidation"
+scenario).
 
 ---
 
