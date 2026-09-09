@@ -27,19 +27,19 @@ Chain strategy: pending
 
 ## Phase 1: WU-1 — RS256 Signing + JWKS (independent)
 
-- [ ] 1.1 Create `src/core/security/keys/signing-key-pair.interface.ts` — `{ privateKeyPem, publicKeyPem, kid }`.
-- [ ] 1.2 Create `src/core/security/keys/resolve-signing-key-pair.ts` — decode base64 `JWT_PRIVATE_KEY` PEM, or generate an ephemeral dev keypair outside production; derive public key via `crypto.createPublicKey`; `kid` = RFC 7638 JWK thumbprint.
-- [ ] 1.3 Create `src/core/security/keys/jwks.service.ts` — public PEM → JWK (`kty/use/alg/kid/n/e`); MUST NOT emit `d`.
-- [ ] 1.4 Modify `src/core/config/auth.config.ts` — drop `jwtSecret`; add `jwtPrivateKey`/`jwtPublicKey`/`jwtKeyId`.
-- [ ] 1.5 Modify `src/core/config/env.validation.ts` — `superRefine` throws when `NODE_ENV=production` and `JWT_PRIVATE_KEY` absent.
-- [ ] 1.6 Modify `src/core/security/security.module.ts` — wire `privateKey`/`publicKey`, `algorithm: 'RS256'`, `keyid`, `verifyOptions.algorithms: ['RS256']`; add JWKS controller to `REST_CONTROLLERS`.
-- [ ] 1.7 Create `src/core/security/transport/rest/dtos/json-web-key.dto.ts` + `jwks-response.dto.ts`.
-- [ ] 1.8 Create `src/core/security/transport/rest/controllers/jwks.controller.ts` — `@Controller({ path: '.well-known', version: VERSION_NEUTRAL })`, `@Get('jwks.json')`, unauthenticated.
-- [ ] 1.9 Modify `src/main.ts` — `setGlobalPrefix('api', { exclude: ['.well-known/jwks.json'] })`; `VERSION_NEUTRAL` alone is insufficient.
-- [ ] 1.10 RED unit test `resolve-signing-key-pair.spec.ts` — prod without `JWT_PRIVATE_KEY` throws; dev generates an ephemeral pair.
-- [ ] 1.11 RED unit test `jwks.service.spec.ts` — output never contains `d`.
-- [ ] 1.12 E2E: anonymous `GET /.well-known/jwks.json` → 200, no `d`; token signed by `TokenSignService` verifies against the published key.
-- [ ] 1.13 Update `docs/integration-guide.md` if signing algorithm/JWKS is documented there.
+- [x] 1.1 Create `src/core/security/keys/signing-key-pair.interface.ts` — `{ privateKeyPem, publicKeyPem, kid }`.
+- [x] 1.2 Create `src/core/security/keys/resolve-signing-key-pair.ts` — decode base64 `JWT_PRIVATE_KEY` PEM, or generate an ephemeral dev keypair outside production; derive public key via `crypto.createPublicKey`; `kid` = RFC 7638 JWK thumbprint.
+- [x] 1.3 Create `src/core/security/keys/jwks.service.ts` — public PEM → JWK (`kty/use/alg/kid/n/e`); MUST NOT emit `d`.
+- [x] 1.4 Modify `src/core/config/auth.config.ts` — drop `jwtSecret`; add `jwtPrivateKey`/`jwtPublicKey`/`jwtKeyId`.
+- [x] 1.5 Modify `src/core/config/env.validation.ts` — `superRefine` throws when `NODE_ENV=production` and `JWT_PRIVATE_KEY` absent.
+- [x] 1.6 Modify `src/core/security/security.module.ts` — wire `privateKey`/`publicKey`, `algorithm: 'RS256'`, `keyid`, `verifyOptions.algorithms: ['RS256']`; add JWKS controller to `REST_CONTROLLERS`.
+- [x] 1.7 Create `src/core/security/transport/rest/dtos/json-web-key.dto.ts` + `jwks-response.dto.ts`.
+- [x] 1.8 Create `src/core/security/transport/rest/controllers/jwks.controller.ts` — `@Controller({ path: '.well-known', version: VERSION_NEUTRAL })`, `@Get('jwks.json')`, unauthenticated.
+- [x] 1.9 Modify `src/main.ts` — `setGlobalPrefix('api', { exclude: ['.well-known/jwks.json'] })`; `VERSION_NEUTRAL` alone is insufficient.
+- [x] 1.10 RED unit test `resolve-signing-key-pair.spec.ts` — prod without `JWT_PRIVATE_KEY` throws; dev generates an ephemeral pair.
+- [x] 1.11 RED unit test `jwks.service.spec.ts` — output never contains `d`.
+- [x] 1.12 E2E: anonymous `GET /.well-known/jwks.json` → 200, no `d`; token signed by `TokenSignService` verifies against the published key.
+- [x] 1.13 Update `docs/integration-guide.md` if signing algorithm/JWKS is documented there.
 
 ## Phase 2: WU-2 — Platform Admin Bootstrap (land before WU-3)
 

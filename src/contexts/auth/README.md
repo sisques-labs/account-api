@@ -189,7 +189,7 @@ no second adapter is built now.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `JWT_SECRET` | `dev-insecure-secret-change-me` | Signs access tokens — set a real secret outside local dev |
+| `JWT_PRIVATE_KEY` | unset (ephemeral dev keypair) | Base64-encoded RSA private key PEM; signs access tokens (RS256). Required in production — see `src/core/config/env.validation.ts` |
 | `JWT_EXPIRES_IN` | `15m` | Access token TTL |
 | `REFRESH_TOKEN_TTL_DAYS` | `30` | Opaque refresh token TTL |
 | `COOKIE_DOMAIN` | unset | `.sisqueslabs.com` in production once apps share the domain |
