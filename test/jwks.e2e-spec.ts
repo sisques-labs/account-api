@@ -1,4 +1,4 @@
-import { createPublicKey, createVerify } from 'crypto';
+import { createHmac, createPublicKey, createVerify } from 'crypto';
 
 import { IAccessTokenClaims } from '@core/security/access-token-claims.interface';
 import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
@@ -94,5 +94,39 @@ describe('JWKS (e2e)', () => {
     );
 
     expect(isValid).toBe(true);
+  });
+
+  it('rejects a pre-cutover HS256-signed token as unauthorized (no HS256/RS256 compatibility bridge)', async () => {
+    // Manually crafted (no jsonwebtoken dependency in this repo) HS256 token,
+    // shaped like a valid access-token payload, signed with an arbitrary
+    // secret unrelated to the service's RSA key pair. Simulates a token
+    // issued before the RS256 migration being replayed after cutover.
+    const encode = (value: unknown): string =>
+      Buffer.from(JSON.stringify(value)).toString('base64url');
+
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      sub: 'legacy-user-under-test',
+      email: 'legacy-hs256@example.com',
+      platformAdmin: false,
+      tenants: [],
+      iat: now,
+      exp: now + 3600,
+    };
+
+    const encodedHeader = encode(header);
+    const encodedPayload = encode(payload);
+    const signature = createHmac('sha256', 'an-arbitrary-pre-cutover-secret')
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64url');
+    const legacyToken = `${encodedHeader}.${encodedPayload}.${signature}`;
+
+    const res = await ctx
+      .http()
+      .get('/api/v1/apps')
+      .set('Authorization', `Bearer ${legacyToken}`);
+
+    expect(res.status).toBe(401);
   });
 });
