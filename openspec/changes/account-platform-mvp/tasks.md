@@ -60,17 +60,18 @@ Chain strategy: pending
 
 ## Phase 3: WU-3a — Session Chain Domain + Persistence (after WU-2 lands)
 
-- [ ] 3.1 Modify `src/contexts/auth/domain/aggregates/session.aggregate.ts` — add `revokedAt`, `replacedBySessionId`, `revoke()`, `isRevoked()`, `markReuseDetected()`; remove in-place `rotate()`.
-- [ ] 3.2 Create `.../domain/interfaces/rotate-session-callback.interface.ts` and `rotate-result.interface.ts` (one type per file).
-- [ ] 3.3 Create `.../domain/exceptions/refresh-token-reuse-detected.exception.ts` — maps to 401.
-- [ ] 3.4 Modify `.../domain/repositories/write/session-write.repository.ts` — add `rotate()`, `revokeAllByUserId()`.
-- [ ] 3.5 Modify TypeORM `session.entity.ts` — drop `UQ_session_user_id`; add nullable `revoked_at`, `replaced_by_session_id` self-FK `ON DELETE SET NULL`; non-unique `IDX_session_user_id`; keep `UQ_session_refresh_token_hash`.
-- [ ] 3.6 Modify TypeORM mapper + write repository implementation — `rotate()` runs in one transaction using `pessimistic_write` (`SELECT ... FOR UPDATE`).
+- [x] 3.1 Modify `src/contexts/auth/domain/aggregates/session.aggregate.ts` — add `revokedAt`, `replacedBySessionId`, `revoke()`, `isRevoked()`, `markReuseDetected()`; remove in-place `rotate()`.
+  - Deviation: `rotate()` was kept (marked `@deprecated`) instead of removed — removing it requires editing `refresh-session.handler.ts`, a Phase 4/WU-3b file explicitly out of scope for this PR. See apply-progress and PR notes.
+- [x] 3.2 Create `.../domain/interfaces/rotate-session-callback.interface.ts` and `rotate-result.interface.ts` (one type per file).
+- [x] 3.3 Create `.../domain/exceptions/refresh-token-reuse-detected.exception.ts` — maps to 401.
+- [x] 3.4 Modify `.../domain/repositories/write/session-write.repository.ts` — add `rotate()`, `revokeAllByUserId()`.
+- [x] 3.5 Modify TypeORM `session.entity.ts` — drop `UQ_session_user_id`; add nullable `revoked_at`, `replaced_by_session_id` self-FK `ON DELETE SET NULL`; non-unique `IDX_session_user_id`; keep `UQ_session_refresh_token_hash`.
+- [x] 3.6 Modify TypeORM mapper + write repository implementation — `rotate()` runs in one transaction using `pessimistic_write` (`SELECT ... FOR UPDATE`).
   - Acceptance: within the locked transaction, INSERT the successor session row **before** UPDATE-ing the current row's `revoked_at`/`replaced_by_session_id`. The self-FK rejects a reference to a not-yet-existing row — this is gardenia-api's own documented bug; do not repeat it.
-- [ ] 3.7 Create `src/database/migrations/{ts}-SessionChainRotation.ts` — `up()`: `DELETE FROM "session"` → drop `UQ_session_user_id` → add nullable columns → self-FK → non-unique index. `down()` reverses and re-deletes rows (never session-preserving either direction).
-- [ ] 3.8 RED unit test `session.aggregate.spec.ts` — `revoke`/`isRevoked` state transitions.
-- [ ] 3.9 Integration test: concurrent rotation on the same token yields exactly one successful pair; the other finds the token already consumed.
-- [ ] 3.10 Integration test: migration `up`/`down` round-trip against real Postgres.
+- [x] 3.7 Create `src/database/migrations/{ts}-SessionChainRotation.ts` — `up()`: `DELETE FROM "session"` → drop `UQ_session_user_id` → add nullable columns → self-FK → non-unique index. `down()` reverses and re-deletes rows (never session-preserving either direction).
+- [x] 3.8 RED unit test `session.aggregate.spec.ts` — `revoke`/`isRevoked` state transitions.
+- [x] 3.9 Integration test: concurrent rotation on the same token yields exactly one successful pair; the other finds the token already consumed.
+- [x] 3.10 Integration test: migration `up`/`down` round-trip against real Postgres.
 
 ## Phase 4: WU-3b — Rotation + Reuse-Detection Wiring (depends on WU-3a)
 

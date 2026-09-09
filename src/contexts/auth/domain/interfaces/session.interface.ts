@@ -9,4 +9,6 @@ export interface ISession extends IBaseAggregate {
   userId: UuidValueObject;
   refreshTokenHash: RefreshTokenHashValueObject;
   expiresAt: DateValueObject;
+  revokedAt: DateValueObject | null;
+  replacedBySessionId: UuidValueObject | null;
 }

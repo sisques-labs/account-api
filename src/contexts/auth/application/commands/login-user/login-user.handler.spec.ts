@@ -53,6 +53,8 @@ describe('LoginUserCommandHandler', () => {
       findByRefreshTokenHash: jest.fn(),
       findById: jest.fn(),
       findByCriteria: jest.fn(),
+      rotate: jest.fn(),
+      revokeAllByUserId: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
     };

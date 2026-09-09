@@ -1,10 +1,12 @@
 import { CreateIdentityAndTenancy1788165600000 } from '../../src/database/migrations/1788165600000-CreateIdentityAndTenancy';
 import { SplitUserAndAuthSession1788181125000 } from '../../src/database/migrations/1788181125000-SplitUserAndAuthSession';
+import { SessionChainRotation1788200000000 } from '../../src/database/migrations/1788200000000-SessionChainRotation';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 const TEST_MIGRATIONS: DataSourceOptions['migrations'] = [
   CreateIdentityAndTenancy1788165600000,
   SplitUserAndAuthSession1788181125000,
+  SessionChainRotation1788200000000,
 ];
 
 export function getTestDataSourceOptions(): DataSourceOptions {
