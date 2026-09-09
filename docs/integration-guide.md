@@ -37,25 +37,22 @@ POST /api/v1/auth/refresh    { refreshToken }                   -> 200 { accessT
 ## 2. Validating the access token in your own app
 
 This is the part the architecture doc describes as "SSR app validates the
-JWT locally with Sisques Account's public key" — **that's not what's built**.
-Today:
+JWT locally with Sisques Account's public key" — **this is now built**.
 
-- The access token is signed **HS256 with a shared secret** (`JWT_SECRET`,
-  see `src/core/config/auth.config.ts` / `security.module.ts`), not an
-  asymmetric key pair. There is **no public key and no JWKS endpoint**
-  exposed by `account-api`.
-- Practical consequence: to validate a token locally today, your app's
-  backend needs the **same `JWT_SECRET` value** as `account-api` (shared via
-  your deployment's secrets, the same way you'd share a DB password) and
-  verify with a standard JWT library (`jsonwebtoken`, `@nestjs/jwt`, etc.),
-  algorithm `HS256`.
-- **This is a known gap, not a final decision.** Sharing a symmetric secret
-  across every consumer app works for now but doesn't match the design
-  intent (issuer holds the private key, consumers only ever need the public
-  one). Moving to RS256 + a `GET /.well-known/jwks.json`-style endpoint is
-  the natural fix before a second real consumer app goes to production —
-  it's flagged here so nobody mistakes "shared secret" for the intended
-  end state.
+- The access token is signed **RS256 with an asymmetric key pair**
+  (`JWT_PRIVATE_KEY`, see `src/core/config/auth.config.ts` /
+  `security.module.ts`). The public key is published, unauthenticated, at
+  `GET /.well-known/jwks.json` as a standard JSON Web Key Set — no private
+  key material is ever exposed there.
+- Practical consequence: your app's backend does **not** need any shared
+  secret. Fetch `GET /.well-known/jwks.json` from `account-api`, pick the
+  key entry matching the token's `kid` header, and verify with a standard
+  JWT library (`jsonwebtoken`, `@nestjs/jwt`, `jose`, etc.), algorithm
+  `RS256`.
+- **Breaking change from earlier HS256 tokens.** Tokens issued before this
+  migration were signed HS256 and cannot be verified by the RS256 path —
+  `account-api` does not implement a dual-verification compatibility
+  bridge. Any client holding a pre-cutover token must re-authenticate.
 
 ### Claims shape (`IAccessTokenClaims`)
 
@@ -72,6 +69,12 @@ Today:
   tenant or being added as a member doesn't retroactively update an
   already-issued token. A client needs to re-login or wait for its next
   refresh to see a new membership.
+- `platformAdmin` is reconciled on every login against the `account-api`
+  operator's `PLATFORM_ADMIN_EMAILS` env var (comma-separated allowlist) —
+  see `src/contexts/auth/README.md`'s "PLATFORM_ADMIN_EMAILS reconciliation"
+  section. It's set/cleared automatically by email membership in that list;
+  there's no admin-management endpoint. Same staleness caveat as `tenants`:
+  a change to the allowlist takes effect on that user's next login.
 - `role` is one of `OWNER` / `ADMIN` / `MEMBER` (`TenantRoleEnum`,
   `src/contexts/tenancy/domain/enums/tenant-role.enum.ts`) — a **fixed,
   closed set** `account-api` assigns and stores, but never interprets
@@ -224,11 +227,12 @@ Concretely, for a new app (say `gardenia-api`), that means:
 | Capability | Status |
 |---|---|
 | Register / login / refresh via REST | ✅ Implemented (`/api/v1/auth/*`) |
-| `Authorization: Bearer` validation in your own backend | ✅ Works, but requires sharing `JWT_SECRET` (see §2 gap) |
+| `Authorization: Bearer` validation in your own backend | ✅ Works — fetch the public key from `GET /.well-known/jwks.json`, no shared secret needed (see §2) |
 | Tenant creation / membership (capa 1 tenancy) | ✅ Implemented (`/api/v1/tenants*`, `/api/v1/apps*` — see root README example) |
 | Tenant-permission guard mechanism (`@sisques-labs/nestjs-kit/rbac`) | ✅ Implemented (v1.9.0+) — bring your own permission enum + role map, the guard/decorator are shared (see §5) |
 | Shared-cookie SSO across `*.sisqueslabs.com` (Pattern A) | ❌ Not wired up (`COOKIE_DOMAIN` unset, untested end-to-end) |
 | `GET /api/token` for SPA clients (Pattern B) | ❌ Not built |
 | Hosted login page (`account-web`) + redirect flow | ❌ Not built (out of MVP scope) |
-| Asymmetric signing (RS256) + JWKS endpoint | ❌ Not built — currently a shared HS256 secret |
+| Asymmetric signing (RS256) + JWKS endpoint | ✅ Implemented (`GET /.well-known/jwks.json`) |
+| `platformAdmin` bootstrap via `PLATFORM_ADMIN_EMAILS` | ✅ Implemented — reconciled on every login (see §2, `src/contexts/auth/README.md`) |
 | Email-based tenant invites | ❌ Not built (out of MVP scope) |

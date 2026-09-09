@@ -1,6 +1,7 @@
 import { EmailAlreadyRegisteredException } from '@contexts/auth/domain/exceptions/email-already-registered.exception';
 import { InvalidCredentialsException } from '@contexts/auth/domain/exceptions/invalid-credentials.exception';
 import { InvalidRefreshTokenException } from '@contexts/auth/domain/exceptions/invalid-refresh-token.exception';
+import { RefreshTokenReuseDetectedException } from '@contexts/auth/domain/exceptions/refresh-token-reuse-detected.exception';
 import { HttpStatus } from '@nestjs/common';
 import { BaseException } from '@sisques-labs/nestjs-kit';
 
@@ -31,6 +32,12 @@ describe('resolveAuthExceptionStatus', () => {
     expect(resolveAuthExceptionStatus(new InvalidRefreshTokenException())).toBe(
       HttpStatus.UNAUTHORIZED,
     );
+  });
+
+  it('should map RefreshTokenReuseDetectedException to 401', () => {
+    expect(
+      resolveAuthExceptionStatus(new RefreshTokenReuseDetectedException()),
+    ).toBe(HttpStatus.UNAUTHORIZED);
   });
 
   it('should return undefined for an exception it does not recognize', () => {
