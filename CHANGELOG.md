@@ -1,6 +1,29 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [0.2.0] - 2026-09-18
+
+### Chore
+- **openspec:** Archive account-platform-mvp and sync delta specs to main (e4678f7)
+
+### Documentation
+- **openspec:** Recover add-tenancy-rbac proposal (0e2b53c)
+- **integration-guide:** Document layer-2 RBAC as each app's own responsibility (634e954)
+- **openspec:** Add account-platform-mvp proposal, spec, design, tasks (3fa2385)
+- **env:** Document PLATFORM_ADMIN_EMAILS in .env.example (b25fc13)
+
+### Features
+- **tenancy:** Enforce RBAC permission checks on tenant endpoints (67cc9a7)
+- **security:** Migrate access token signing from HS256 to RS256 with JWKS endpoint (7dbcf74)
+- **auth,user:** Bootstrap platform_admin from PLATFORM_ADMIN_EMAILS on login (b957166)
+- **auth:** Add session chain schema, domain, and persistence (WU-3a) (a2c1cab)
+- **auth:** Wire locked chain rotation and reuse-detection into refresh/login (WU-3b) (df56135)
+
+### Refactor
+- **tenancy:** Build TenantPermissionGuard on @sisques-labs/nestjs-kit/rbac (be0db96)
+
+### Testing
+- **auth:** Add e2e regression test for HS256 pre-cutover token rejection (44901fd)
 ## [0.1.2] - 2026-09-04
 
 ### Documentation
