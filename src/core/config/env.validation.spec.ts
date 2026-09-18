@@ -54,7 +54,10 @@ describe('validateEnv', () => {
   });
 
   it('rejects missing CORS origins in production', () => {
-    const env = validEnv({ NODE_ENV: 'production' });
+    const env = validEnv({
+      NODE_ENV: 'production',
+      JWT_PRIVATE_KEY: 'base64-encoded-pem',
+    });
 
     expect(() => validateEnv(env)).toThrow(
       /CORS_ORIGINS or FRONTEND_URL: at least one origin must be configured in production/,
@@ -65,6 +68,7 @@ describe('validateEnv', () => {
     const env = validEnv({
       NODE_ENV: 'production',
       FRONTEND_URL: 'https://app.example.com',
+      JWT_PRIVATE_KEY: 'base64-encoded-pem',
     });
 
     expect(() => validateEnv(env)).not.toThrow();
@@ -74,6 +78,7 @@ describe('validateEnv', () => {
     const env = validEnv({
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://app.example.com',
+      JWT_PRIVATE_KEY: 'base64-encoded-pem',
     });
 
     expect(() => validateEnv(env)).not.toThrow();
@@ -83,6 +88,33 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv(null as unknown as Record<string, unknown>),
     ).toThrow(/\(root\)/);
+  });
+
+  it('rejects missing JWT_PRIVATE_KEY in production', () => {
+    const env = validEnv({
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.example.com',
+    });
+
+    expect(() => validateEnv(env)).toThrow(
+      /JWT_PRIVATE_KEY is required when NODE_ENV is "production"/,
+    );
+  });
+
+  it('accepts a configured JWT_PRIVATE_KEY in production', () => {
+    const env = validEnv({
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://app.example.com',
+      JWT_PRIVATE_KEY: 'base64-encoded-pem',
+    });
+
+    expect(() => validateEnv(env)).not.toThrow();
+  });
+
+  it('accepts a missing JWT_PRIVATE_KEY outside production', () => {
+    const env = validEnv({ NODE_ENV: 'development' });
+
+    expect(() => validateEnv(env)).not.toThrow();
   });
 
   it('accepts a valid OTEL_EXPORTER_OTLP_ENDPOINT', () => {

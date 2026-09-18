@@ -13,8 +13,10 @@ import { Request } from 'express';
  * Requires a valid Sisques Account access token (`Authorization: Bearer`).
  * Cross-cutting — lives in `src/core/` (not owned by any bounded context)
  * because every context's transport layer needs it. Verifies with the same
- * `JwtService` (secret from `auth.jwtSecret`) that `auth`'s `TokenSignService`
- * uses to sign. Works for both REST controllers and GraphQL resolvers — a
+ * `JwtService` (RS256 public key from `auth.jwtPublicKey`, resolved by
+ * `resolveSigningKeyPair`) that `auth`'s `TokenSignService` uses to sign.
+ * The same public key is published at `GET /.well-known/jwks.json` for
+ * external verifiers. Works for both REST controllers and GraphQL resolvers — a
  * GraphQL `ExecutionContext` has no HTTP request of its own, so the actual
  * `req` is pulled from the GraphQL context object instead (populated by
  * `GraphQLModule.forRoot`'s `context: ({ req, res }) => ({ req, res })`).
