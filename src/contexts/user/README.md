@@ -6,8 +6,9 @@
 proves who they are, only who they are:
 
 - `id`, `externalId` (the identity provider's subject — Keycloak's `sub`
-  today), `email`, `displayName`, `platformAdmin` (unused by any MVP
-  endpoint, but a real column per the architecture doc's schema).
+  today), `email`, `displayName`, `platformAdmin` (reconciled on every login
+  against `PLATFORM_ADMIN_EMAILS` — see "How `platformAdmin` gets
+  reconciled" below).
 
 What it does **not** own: passwords, sessions/refresh tokens, JWT issuance,
 or the Keycloak adapter — that's the `auth` context. It also doesn't own
@@ -61,14 +62,15 @@ ESLint rule). See `auth`'s README for the `auth` ⇄ `user` ports in detail.
 | `externalId` | `ExternalIdValueObject` | Identity provider's subject id |
 | `email` | `UserEmailValueObject` | Unique |
 | `displayName` | `DisplayNameValueObject` | |
-| `platformAdmin` | `BooleanValueObject` | Default `false`; no MVP endpoint reads/writes it yet |
+| `platformAdmin` | `BooleanValueObject` | Default `false`; reconciled via `SetUserPlatformAdminCommand` on every login |
 
 Methods: `create()` (emits `UserRegisteredEvent`); `update()`, `delete()`,
 and private `changeEmail()` / `changeDisplayName()` / `changePlatformAdmin()`
 (each a no-op if the value is unchanged, otherwise emits the matching
-`*Changed` event plus `UserUpdatedEvent`/`UserDeletedEvent`) — prepared for
-future use, not yet exposed via a command (no `UpdateUserCommand`/
-`DeleteUserCommand` exists today).
+`*Changed` event plus `UserUpdatedEvent`/`UserDeletedEvent`). `update()` is
+exposed today only through `SetUserPlatformAdminCommand` (`platformAdmin`
+field only) — no general-purpose `UpdateUserCommand`/`DeleteUserCommand`
+exists yet.
 
 ---
 
@@ -88,6 +90,29 @@ CreateUserCommand (dispatched by auth's UserProvisioningAdapter)
 
 ---
 
+## How `platformAdmin` gets reconciled
+
+`user` never reads `PLATFORM_ADMIN_EMAILS` itself — reconciliation is driven
+cross-context by `auth`'s `LoginUserCommandHandler` on every successful
+login (see `auth`'s README "How login works"):
+
+```
+SetUserPlatformAdminCommand (dispatched by auth's UserPlatformAdminAdapter)
+  -> SetUserPlatformAdminCommandHandler
+     1. AssertUserExistsService (404 if the user id doesn't exist)
+     2. Short-circuit, no save, if platformAdmin already matches the
+        target value
+     3. user.update({ platformAdmin }) -> save -> publish events
+```
+
+`auth` computes the target boolean itself (via its own
+`ReconcilePlatformAdminService`, a pure function of the allowlist + the
+current flag) and only dispatches this command when a change is actually
+needed — the handler's no-op short-circuit is a second, defensive layer,
+not the only one.
+
+---
+
 ## Cross-context ports (consumed, not owned)
 
 `user` doesn't call any other context — it's a pure leaf. It's reached by:
@@ -96,6 +121,7 @@ CreateUserCommand (dispatched by auth's UserProvisioningAdapter)
 |----------|------|-----------|
 | `auth` | `IUserLookupPort` | `UserFindByEmailQuery` / `UserFindByIdQuery` |
 | `auth` | `IUserProvisioningPort` | `CreateUserCommand` |
+| `auth` | `IUserPlatformAdminPort` | `SetUserPlatformAdminCommand` |
 | `tenancy` | `IUserLookupPort` (tenancy's own, narrower version) | `UserFindByEmailQuery` |
 
 > Boundary rule: cross-context imports are allowed **only** from
@@ -115,6 +141,7 @@ point that touches a user today (registration/login/refresh).
 | Class | Description |
 |-------|-------------|
 | `CreateUserCommand` | Creates the local user row — dispatched cross-context by `auth` |
+| `SetUserPlatformAdminCommand` | Reconciles `platformAdmin` — dispatched cross-context by `auth` on every login |
 | `UserFindByEmailQuery` | Read-side lookup by email — consumed by `auth` and `tenancy` |
 | `UserFindByIdQuery` | Read-side lookup by id — consumed by `auth`'s refresh flow |
 

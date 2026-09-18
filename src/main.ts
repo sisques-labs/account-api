@@ -14,7 +14,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: ['.well-known/jwks.json'] });
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',

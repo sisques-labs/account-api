@@ -1,4 +1,10 @@
+import { createPublicKey } from 'crypto';
+
 import { authConfig } from './auth.config';
+
+function toBase64Pem(pem: string): string {
+  return Buffer.from(pem, 'utf8').toString('base64');
+}
 
 describe('authConfig', () => {
   const ORIGINAL_ENV = { ...process.env };
@@ -8,7 +14,7 @@ describe('authConfig', () => {
   });
 
   it('should fall back to defaults when no env vars are set', () => {
-    delete process.env.JWT_SECRET;
+    delete process.env.JWT_PRIVATE_KEY;
     delete process.env.JWT_EXPIRES_IN;
     delete process.env.REFRESH_TOKEN_TTL_DAYS;
     delete process.env.KEYCLOAK_BASE_URL;
@@ -25,7 +31,6 @@ describe('authConfig', () => {
   });
 
   it('should read values from the environment when set', () => {
-    process.env.JWT_SECRET = 'secret-123';
     process.env.JWT_EXPIRES_IN = '10m';
     process.env.REFRESH_TOKEN_TTL_DAYS = '7';
     process.env.KEYCLOAK_BASE_URL = 'http://keycloak:8080';
@@ -35,7 +40,6 @@ describe('authConfig', () => {
 
     const config = authConfig();
 
-    expect(config.jwtSecret).toBe('secret-123');
     expect(config.jwtExpiresIn).toBe('10m');
     expect(config.refreshTokenTtlDays).toBe(7);
     expect(config.keycloak).toEqual({
@@ -44,5 +48,64 @@ describe('authConfig', () => {
       clientId: 'custom-client',
       clientSecret: 'super-secret',
     });
+  });
+
+  it('generates an ephemeral RS256 keypair when JWT_PRIVATE_KEY is unset', () => {
+    delete process.env.JWT_PRIVATE_KEY;
+
+    const config = authConfig();
+
+    expect(config.jwtPrivateKey).toContain('PRIVATE KEY');
+    expect(config.jwtPublicKey).toContain('PUBLIC KEY');
+    expect(config.jwtKeyId.length).toBeGreaterThan(0);
+  });
+
+  it('decodes JWT_PRIVATE_KEY and derives the matching public key/kid when set', () => {
+    const ephemeral = authConfig();
+    process.env.JWT_PRIVATE_KEY = toBase64Pem(ephemeral.jwtPrivateKey);
+
+    const config = authConfig();
+
+    expect(config.jwtPrivateKey).toBe(ephemeral.jwtPrivateKey);
+    expect(config.jwtPublicKey).toBe(
+      createPublicKey(ephemeral.jwtPrivateKey)
+        .export({ type: 'spki', format: 'pem' })
+        .toString(),
+    );
+  });
+
+  it('no longer exposes jwtSecret (RS256, not HS256)', () => {
+    const config = authConfig() as unknown as Record<string, unknown>;
+
+    expect(config.jwtSecret).toBeUndefined();
+  });
+
+  it('resolves platformAdminEmails to null when PLATFORM_ADMIN_EMAILS is unset', () => {
+    delete process.env.PLATFORM_ADMIN_EMAILS;
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toBeNull();
+  });
+
+  it('resolves platformAdminEmails to an empty array when PLATFORM_ADMIN_EMAILS is an empty string', () => {
+    process.env.PLATFORM_ADMIN_EMAILS = '';
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toEqual([]);
+  });
+
+  it('trims and lowercases a comma-separated PLATFORM_ADMIN_EMAILS list', () => {
+    process.env.PLATFORM_ADMIN_EMAILS =
+      ' Admin@Example.com , second@EXAMPLE.com ,,third@example.com';
+
+    const config = authConfig();
+
+    expect(config.platformAdminEmails).toEqual([
+      'admin@example.com',
+      'second@example.com',
+      'third@example.com',
+    ]);
   });
 });

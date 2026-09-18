@@ -43,6 +43,7 @@ const baseEnvSchema = z
     EVENTSTORE_ENABLED: z.enum(['true', 'false']).optional(),
     EVENTSTORE_CONNECTION_STRING: z.string().optional(),
     EVENTSTORE_STREAM_PREFIX: z.string().optional(),
+    JWT_PRIVATE_KEY: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.KAFKA_ENABLED === 'true' && !env.KAFKA_BROKERS?.trim()) {
@@ -50,6 +51,14 @@ const baseEnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ['KAFKA_BROKERS'],
         message: 'KAFKA_BROKERS is required when KAFKA_ENABLED is "true"',
+      });
+    }
+
+    if (env.NODE_ENV === 'production' && !env.JWT_PRIVATE_KEY?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_PRIVATE_KEY'],
+        message: 'JWT_PRIVATE_KEY is required when NODE_ENV is "production"',
       });
     }
   });

@@ -2,8 +2,10 @@ import { LoginUserCommand } from '@contexts/auth/application/commands/login-user
 import { IIdentityProviderPort } from '@contexts/auth/application/ports/identity-provider.port';
 import { ITenantMembershipLookupPort } from '@contexts/auth/application/ports/tenant-membership-lookup.port';
 import { IUserLookupPort } from '@contexts/auth/application/ports/user-lookup.port';
+import { IUserPlatformAdminPort } from '@contexts/auth/application/ports/user-platform-admin.port';
 import { GenerateRefreshTokenService } from '@contexts/auth/application/services/write/generate-refresh-token/generate-refresh-token.service';
 import { HashRefreshTokenService } from '@contexts/auth/application/services/write/hash-refresh-token/hash-refresh-token.service';
+import { ReconcilePlatformAdminService } from '@contexts/auth/application/services/write/reconcile-platform-admin/reconcile-platform-admin.service';
 import { TokenSignService } from '@contexts/auth/application/services/write/token-sign/token-sign.service';
 import { SessionBuilder } from '@contexts/auth/domain/builders/session.builder';
 import { InvalidCredentialsException } from '@contexts/auth/domain/exceptions/invalid-credentials.exception';
@@ -21,6 +23,8 @@ describe('LoginUserCommandHandler', () => {
   let tokenSignService: jest.Mocked<TokenSignService>;
   let generateRefreshTokenService: jest.Mocked<GenerateRefreshTokenService>;
   let hashRefreshTokenService: jest.Mocked<HashRefreshTokenService>;
+  let reconcilePlatformAdminService: jest.Mocked<ReconcilePlatformAdminService>;
+  let userPlatformAdminPort: jest.Mocked<IUserPlatformAdminPort>;
   let configService: jest.Mocked<ConfigService>;
 
   const command = new LoginUserCommand({
@@ -49,6 +53,8 @@ describe('LoginUserCommandHandler', () => {
       findByRefreshTokenHash: jest.fn(),
       findById: jest.fn(),
       findByCriteria: jest.fn(),
+      rotate: jest.fn(),
+      revokeAllByUserId: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
     };
@@ -61,8 +67,18 @@ describe('LoginUserCommandHandler', () => {
     hashRefreshTokenService = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<HashRefreshTokenService>;
+    reconcilePlatformAdminService = {
+      execute: jest.fn().mockResolvedValue(null),
+    } as unknown as jest.Mocked<ReconcilePlatformAdminService>;
+    userPlatformAdminPort = {
+      setPlatformAdmin: jest.fn(),
+    };
     configService = {
-      get: jest.fn().mockReturnValue(30),
+      get: jest
+        .fn()
+        .mockImplementation((key: string) =>
+          key === 'auth.platformAdminEmails' ? null : 30,
+        ),
     } as unknown as jest.Mocked<ConfigService>;
 
     handler = new LoginUserCommandHandler(
@@ -73,6 +89,8 @@ describe('LoginUserCommandHandler', () => {
       tokenSignService,
       generateRefreshTokenService,
       hashRefreshTokenService,
+      reconcilePlatformAdminService,
+      userPlatformAdminPort,
       new SessionBuilder(),
       configService,
     );
@@ -129,7 +147,6 @@ describe('LoginUserCommandHandler', () => {
       externalId: 'kc-sub-1',
     });
     userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
-    sessionWriteRepository.findByUserId.mockResolvedValue(null);
     sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
@@ -144,21 +161,12 @@ describe('LoginUserCommandHandler', () => {
     expect(savedSession.refreshTokenHash.value).toBe('b'.repeat(64));
   });
 
-  it('should rotate the existing session when the user already has one', async () => {
+  it('should always create a brand-new chain-root session, even when the user already has an active one', async () => {
     identityProviderPort.verifyCredentials.mockResolvedValue({
       externalId: 'kc-sub-1',
     });
     userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
-    const existingSession = new SessionBuilder()
-      .withId('a1a1a1a1-e29b-41d4-a716-446655440000')
-      .withUserId(USER_LOOKUP_RESULT.userId)
-      .withRefreshTokenHash('a'.repeat(64))
-      .withExpiresAt(new Date(Date.now() + 1_000_000))
-      .withCreatedAt(new Date('2024-01-01'))
-      .withUpdatedAt(new Date('2024-01-01'))
-      .build();
-    sessionWriteRepository.findByUserId.mockResolvedValue(existingSession);
-    sessionWriteRepository.save.mockResolvedValue(existingSession);
+    sessionWriteRepository.save.mockResolvedValue(undefined as never);
     tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
     tokenSignService.execute.mockResolvedValue('signed-access-token');
     generateRefreshTokenService.execute.mockResolvedValue('raw-refresh-token');
@@ -166,7 +174,80 @@ describe('LoginUserCommandHandler', () => {
 
     await handler.execute(command);
 
-    expect(sessionWriteRepository.save).toHaveBeenCalledWith(existingSession);
-    expect(existingSession.refreshTokenHash.value).toBe('c'.repeat(64));
+    expect(sessionWriteRepository.findByUserId).not.toHaveBeenCalled();
+    expect(sessionWriteRepository.save).toHaveBeenCalledTimes(1);
+    const savedSession = sessionWriteRepository.save.mock.calls[0][0];
+    expect(savedSession.userId.value).toBe(USER_LOOKUP_RESULT.userId);
+    expect(savedSession.refreshTokenHash.value).toBe('c'.repeat(64));
+    expect(savedSession.isRevoked()).toBe(false);
+  });
+
+  describe('platform-admin reconciliation', () => {
+    beforeEach(() => {
+      identityProviderPort.verifyCredentials.mockResolvedValue({
+        externalId: 'kc-sub-1',
+      });
+      sessionWriteRepository.findByUserId.mockResolvedValue(null);
+      sessionWriteRepository.save.mockResolvedValue(undefined as never);
+      tenantMembershipLookupPort.findMembershipsByUserId.mockResolvedValue([]);
+      tokenSignService.execute.mockResolvedValue('signed-access-token');
+      generateRefreshTokenService.execute.mockResolvedValue(
+        'raw-refresh-token',
+      );
+      hashRefreshTokenService.execute.mockResolvedValue('d'.repeat(64));
+      configService.get.mockImplementation((key: string) =>
+        key === 'auth.platformAdminEmails' ? ['user@example.com'] : 30,
+      );
+    });
+
+    it('dispatches the port and signs the reconciled value when granting', async () => {
+      userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
+      reconcilePlatformAdminService.execute.mockResolvedValue(true);
+
+      await handler.execute(command);
+
+      expect(reconcilePlatformAdminService.execute).toHaveBeenCalledWith({
+        email: USER_LOOKUP_RESULT.email,
+        currentPlatformAdmin: USER_LOOKUP_RESULT.platformAdmin,
+        platformAdminEmails: ['user@example.com'],
+      });
+      expect(userPlatformAdminPort.setPlatformAdmin).toHaveBeenCalledWith(
+        USER_LOOKUP_RESULT.userId,
+        true,
+      );
+      expect(tokenSignService.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ platformAdmin: true }),
+      );
+    });
+
+    it('dispatches the port and signs the reconciled value when revoking', async () => {
+      userLookupPort.findByEmail.mockResolvedValue({
+        ...USER_LOOKUP_RESULT,
+        platformAdmin: true,
+      });
+      reconcilePlatformAdminService.execute.mockResolvedValue(false);
+
+      await handler.execute(command);
+
+      expect(userPlatformAdminPort.setPlatformAdmin).toHaveBeenCalledWith(
+        USER_LOOKUP_RESULT.userId,
+        false,
+      );
+      expect(tokenSignService.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ platformAdmin: false }),
+      );
+    });
+
+    it('does not dispatch the port and signs the existing flag when reconciliation is a no-op', async () => {
+      userLookupPort.findByEmail.mockResolvedValue(USER_LOOKUP_RESULT);
+      reconcilePlatformAdminService.execute.mockResolvedValue(null);
+
+      await handler.execute(command);
+
+      expect(userPlatformAdminPort.setPlatformAdmin).not.toHaveBeenCalled();
+      expect(tokenSignService.execute).toHaveBeenCalledWith(
+        expect.objectContaining({ platformAdmin: false }),
+      );
+    });
   });
 });

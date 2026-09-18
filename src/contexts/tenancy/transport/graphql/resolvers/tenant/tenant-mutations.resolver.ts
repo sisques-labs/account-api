@@ -6,6 +6,9 @@ import { TenantAddMemberRequestDto } from '@contexts/tenancy/transport/graphql/d
 import { TenantCreateRequestDto } from '@contexts/tenancy/transport/graphql/dtos/requests/tenant/tenant-create.request.dto';
 import { TenantDeleteRequestDto } from '@contexts/tenancy/transport/graphql/dtos/requests/tenant/tenant-delete.request.dto';
 import { TenantUpdateRequestDto } from '@contexts/tenancy/transport/graphql/dtos/requests/tenant/tenant-update.request.dto';
+import { TenantPermissionEnum } from '@contexts/tenancy/domain/enums/tenant-permission.enum';
+import { RequiresPermission } from '@contexts/tenancy/infrastructure/decorators/requires-permission.decorator';
+import { TenantPermissionGuard } from '@contexts/tenancy/infrastructure/guards/tenant-permission.guard';
 import {
   CurrentUser,
   CurrentUserPayload,
@@ -55,6 +58,8 @@ export class TenantMutationsResolver {
   }
 
   @Mutation(() => MutationResponseDto)
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.MANAGE_TENANT)
   async tenantUpdate(
     @Args('input') input: TenantUpdateRequestDto,
     @CurrentUser() user: CurrentUserPayload,
@@ -80,6 +85,8 @@ export class TenantMutationsResolver {
   }
 
   @Mutation(() => MutationResponseDto)
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.DELETE_TENANT)
   async tenantDelete(
     @Args('input') input: TenantDeleteRequestDto,
     @CurrentUser() user: CurrentUserPayload,
@@ -103,6 +110,8 @@ export class TenantMutationsResolver {
   }
 
   @Mutation(() => MutationResponseDto)
+  @UseGuards(TenantPermissionGuard)
+  @RequiresPermission(TenantPermissionEnum.MANAGE_MEMBERS)
   async tenantMemberAdd(
     @Args('input') input: TenantAddMemberRequestDto,
   ): Promise<MutationResponseDto> {
